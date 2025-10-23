@@ -5845,6 +5845,7 @@ var
   versao_atu: TStringList;
   versao_new: TStringList;
   versao_min: TStringList;
+  param_versao: String;
 begin
   DM.qrVERSAO.Close;
   DM.qrVERSAO.Open;
@@ -5872,7 +5873,9 @@ begin
     Exit;
   end;
 
-  if (Trim(param.Strings.Values['versao'+fIniciando.LANG]) = '') then
+  param_versao := LowerCase(fIniciando.LANG)+'_version';
+
+  if (Trim(param.Strings.Values[param_versao]) = '') then
   begin
     Result := false;
     Exit;
@@ -5880,7 +5883,7 @@ begin
 
   versao_new := TStringList.Create;
   versao_new.Delimiter := '.';
-  versao_new.DelimitedText := param.Strings.Values['versao'+fIniciando.LANG];
+  versao_new.DelimitedText := param.Strings.Values[param_versao];
 
   if (StrToInt(trim(versao_atu[0])) < StrToInt(trim(versao_new[0]))) or
      (

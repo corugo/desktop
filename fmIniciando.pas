@@ -48,7 +48,7 @@ procedure TfIniciando.AppCreateForm(InstanceClass: TComponentClass;
   var Reference);
 begin
   Application.CreateForm(InstanceClass, Reference);
-  if trim(LANG) <> '' then
+  if (trim(LANG) <> '') and (trim(LANG) <> 'PT') then
     TranslateForm(TForm(Reference));
 end;
 
@@ -58,7 +58,7 @@ var
 begin
   DM.ADO.Connected := false;
   vLang.Strings.Clear;
-  LANG := '';
+  LANG := 'PT';
 
   arq := ExtractFilePath(application.exename)+'.translate';
   if FileExists(arq) then

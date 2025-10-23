@@ -118,18 +118,6 @@ begin
   arquivo := fmIndex.dir_temp + '\'+fmIndex.param.Strings.Values['setup_name'+fIniciando.LANG];
   baixado := fmIndex.DownloadArquivo(fmIndex.param.Strings.Values['download'+fIniciando.LANG]+'?lang='+fIniciando.LANG,arquivo);
 
-  (*
-  inst := fmIndex.param.Strings.Values['instalador'+fIniciando.LANG];
-  setup_dir := inst;
-//  DeleteFile(arquivo);
-  arquivo := ExtractFilePath(application.ExeName)+setup_dir;
-  lista := TStringList.Create;
-  lista.Add(setup_dir);
-
-  fIniciando.AppCreateForm(TfAtualiza, fAtualiza);
-  fAtualiza.arquivos := lista;
-  fAtualiza.ShowModal;  *)
-
 
   if (not FileExists(arquivo)) or (baixado = false) then
   begin

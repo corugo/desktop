@@ -97,17 +97,17 @@
         <Debugger_RunParams>0 des=1;pwd=bddbuscacdja;internet_=0;_dir_config=config_ES;_lang=ES</Debugger_RunParams>
         <Icon_MainIcon>LouvorJA_Icon3.ico</Icon_MainIcon>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <VerInfo_MajorVer>25</VerInfo_MajorVer>
+        <VerInfo_MajorVer>26</VerInfo_MajorVer>
         <DCC_ExeOutput>D:\OneDrive\Documentos\Delphi\Sistemas\LouvorJA\Software\</DCC_ExeOutput>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_AutoGenVersion>true</VerInfo_AutoGenVersion>
-        <VerInfo_Keys>CompanyName=;FileVersion=25.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileVersion=26.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
         <BT_BuildType>Debug</BT_BuildType>
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <Debugger_CWD>D:\OneDrive\Documentos\Delphi\Sistemas\LouvorJA\Software</Debugger_CWD>
-        <UWP_DelphiLogo44>Arquivos Projeto\ico\Ícones Programa\Novo Logo.png</UWP_DelphiLogo44>
-        <UWP_DelphiLogo150>Arquivos Projeto\ico\Ícones Programa\Novo Logo.png</UWP_DelphiLogo150>
+        <UWP_DelphiLogo44>Arquivos Projeto\ico\Ícones Programa\Logo.png</UWP_DelphiLogo44>
+        <UWP_DelphiLogo150>Arquivos Projeto\ico\Ícones Programa\Logo.png</UWP_DelphiLogo150>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
@@ -277,6 +277,13 @@
                 </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="3">
+                <DeployFile LocalName="Arquivos Projeto\ico\Ícones Programa\Logo.png" Configuration="Debug" Class="UWP_DelphiLogo44">
+                    <Platform Name="Win32">
+                        <RemoteDir>Assets\</RemoteDir>
+                        <RemoteName>Logo44x44.png</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="Arquivos Projeto\ico\Ícones Programa\Novo Logo.png" Configuration="Debug" Class="UWP_DelphiLogo44">
                     <Platform Name="Win32">
                         <RemoteDir>Assets\</RemoteDir>
