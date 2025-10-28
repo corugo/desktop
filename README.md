@@ -53,8 +53,8 @@ Instação opcional. Serve para deixar o código com uma aparência mais organiz
 ### PNGComponents
 
 1. Abra o RAD Studio e no menu "File", selecione "Open".
-2. Navegue até a pasta `/components/PNGComponents/Packages/Tokyo/Delphi` deste repositório e selecione o arquivo `PngComponentsDDesign.dpk`.
-3. O pacote será exibido em seu Project Manager (normalmente a porção direita da tela) sob o nome `PngComponentsDDesign250.bpl`. Clique com o botão direito nesse projeto e clique em "Install".
+2. Navegue até a pasta `/components/PngComponents/PackagesTokyo` deste repositório e selecione o arquivo `PngComponentsDesign.dpk`.
+3. O pacote será exibido em seu Project Manager (normalmente a porção direita da tela) sob o nome `PngComponentsDesign250.bpl`. Clique com o botão direito nesse projeto e clique em "Install".
 4. Após instalado, pode fechar o projeto.
 
 ## Execução do Programa
