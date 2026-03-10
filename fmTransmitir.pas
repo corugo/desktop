@@ -145,6 +145,13 @@ begin
     Binding := IdHTTPServer1.Bindings.Add;
     Binding.Port := IdHTTPServer1.DefaultPort;
     Binding.IP := seSrvUrl.Text;
+    // Also bind to localhost for local API access (e.g., from web browsers)
+    if seSrvUrl.Text <> '127.0.0.1' then
+    begin
+      Binding := IdHTTPServer1.Bindings.Add;
+      Binding.Port := IdHTTPServer1.DefaultPort;
+      Binding.IP := '127.0.0.1';
+    end;
     try
       IdHTTPServer1.Active := True;
       btServidor.Enabled := True;
@@ -228,8 +235,51 @@ var
   url:string;
   arq:string;
   txt: TStringList;
+  songId: Integer;
 begin
+  // Allow cross-origin requests from web applications
+  AResponseInfo.CustomHeaders.Values['Access-Control-Allow-Origin'] := '*';
+  AResponseInfo.CustomHeaders.Values['Access-Control-Allow-Methods'] := 'GET, OPTIONS';
+
   arq := ARequestInfo.Document;
+
+  // API: Health check endpoint (used by web apps to detect if LouvorJA is running)
+  if arq = '/api/ping' then
+  begin
+    AResponseInfo.ContentType := 'application/json';
+    AResponseInfo.CharSet := 'utf-8';
+    AResponseInfo.ContentText := '{"status":"ok","app":"LouvorJA"}';
+    Exit;
+  end;
+
+  // API: Open a song slide by its database ID
+  // Usage: GET /api/open-song?id=123
+  if arq = '/api/open-song' then
+  begin
+    AResponseInfo.ContentType := 'application/json';
+    AResponseInfo.CharSet := 'utf-8';
+    if TryStrToInt(ARequestInfo.Params.Values['id'], songId) then
+    begin
+      TThread.Queue(nil,
+        procedure
+        begin
+          if Assigned(fmIndex) then
+            fmIndex.abreLetraMusica('BD', '', songId, True);
+        end
+      );
+      AResponseInfo.ContentText :=
+        '{"status":"ok","action":"open-song","id":' + IntToStr(songId) + '}';
+    end
+    else
+    begin
+      AResponseInfo.ResponseNo := 400;
+      AResponseInfo.ContentText :=
+        '{"status":"error","message":"Missing or invalid song ID. Usage: /api/open-song?id=123"}';
+    end;
+    Exit;
+  end;
+
+  // Static file serving (existing behavior)
   if (Trim(arq) = '') or (Trim(arq) = '/') then
     arq := '/index.htm';
   if (Trim(arq) = '/musica') or (Trim(arq) = '/musica/') or
@@ -242,8 +292,12 @@ begin
     url := fmIndex.dir_config+'server'+arq;
   end;
   txt := TStringList.Create;
-  txt.LoadFromFile(url);
-  AResponseInfo.ContentText := txt.Text;
+  try
+    txt.LoadFromFile(url);
+    AResponseInfo.ContentText := txt.Text;
+  finally
+    txt.Free;
+  end;
 end;
 
 procedure TfTransmitir.seSrvUrlExit(Sender: TObject);
