@@ -81,7 +81,7 @@ begin
     arq := i;
     if not IdFTP1.Connected then
     begin
-      sTitulo.Caption := 'Conexão perdida... Reconectando...';
+      sTitulo.Caption := 'Conexï¿½o perdida... Reconectando...';
       ftp_conecta();
     end;
 
@@ -174,10 +174,10 @@ begin
       if (Pos('too many connections', LowerCase(E.Message)) > 0) or
          (Pos('servidor sobrecarregado', LowerCase(E.Message)) > 0) then
       begin
-        msg := 'O servidor estás sobrecarregado. Muitos usuários estão atualizando os arquivos neste momento. Tente novamente em alguns minutos!'+#13#10;
+        msg := 'O servidor estï¿½s sobrecarregado. Muitos usuï¿½rios estï¿½o atualizando os arquivos neste momento. Tente novamente em alguns minutos!'+#13#10;
       end;
 
-      if (Application.MessageBox(PChar('Não foi possível conectar ao servidor!'
+      if (Application.MessageBox(PChar('Nï¿½o foi possï¿½vel conectar ao servidor!'
           +#13#10
           +msg
           +#13#10
@@ -285,7 +285,7 @@ begin
 
   fmIndex.gravaLog('Conectando FTP');
 
-  sTitulo.Caption := 'Buscando informações...';
+  sTitulo.Caption := 'Buscando informaï¿½ï¿½es...';
   pbProgresso.Style := pbstMarquee;
 
   fmIndex.gravaLog('URL: '+fmIndex.url_params);
@@ -298,7 +298,7 @@ begin
     try
       LinkPag := DM.IdHTTP1.Get(fmIndex.url_params);
     except
-      Application.MessageBox(PChar('Não foi possível se conectar!'),fmIndex.TITULO,mb_ok+MB_ICONERROR);
+      Application.MessageBox(PChar('Nï¿½o foi possï¿½vel se conectar!'),fmIndex.TITULO,mb_ok+MB_ICONERROR);
       tmrFecha.Enabled := True;
       erro := True;
       Exit;
@@ -313,7 +313,7 @@ begin
 
   if (fmIndex.param.Strings.Values['conn_ftp'] = '') then
   begin
-    Application.MessageBox(PChar('Não foi possível buscar informações de conexão!'),fmIndex.TITULO,mb_ok+MB_ICONERROR);
+    Application.MessageBox(PChar('Nï¿½o foi possï¿½vel buscar informaï¿½ï¿½es de conexï¿½o!'),fmIndex.TITULO,mb_ok+MB_ICONERROR);
     tmrFecha.Enabled := True;
     erro := True;
     Exit;
@@ -347,7 +347,7 @@ begin
       else
         url := fmIndex.param.Strings.Values['conn_ftp']+'?data='+DM.IdEncoderMIME.EncodeString(lParams)+'&lang='+fIniciando.LANG;
 
-      fmIndex.gravaLog('URL para autorização de conexão: '+url);
+      fmIndex.gravaLog('URL para autorizaï¿½ï¿½o de conexï¿½o: '+url);
 
       while (tmrFecha.Enabled = False) and (dados_ftp = False)  do
       begin
@@ -359,7 +359,7 @@ begin
           on E: Exception do
           begin
             dados_ftp := False;
-            if (Application.MessageBox(PChar('Não foi possível obter dados FTP! O servidor pode estar indisponível, ou o programa não possui permissões de acesso à internet.'+#13#10+'Causa do erro: '+E.Message+#13#10+'Tentar novamente?'),fmIndex.TITULO,mb_yesno+MB_ICONERROR) <> 6) then
+            if (Application.MessageBox(PChar('Nï¿½o foi possï¿½vel obter dados FTP! O servidor pode estar indisponï¿½vel, ou o programa nï¿½o possui permissï¿½es de acesso ï¿½ internet.'+#13#10+'Causa do erro: '+E.Message+#13#10+'Tentar novamente?'),fmIndex.TITULO,mb_yesno+MB_ICONERROR) <> 6) then
             begin
               fmIndex.erro_log.Lines.Add(E.Message);
               fmIndex.erro_log.Lines.Add(url);
@@ -392,13 +392,13 @@ begin
         begin
           if (tentat <= 5) then
           begin
-            sTitulo.Caption := 'Não foi possível obter dados da conexão! Tentando novamente...';
+            sTitulo.Caption := 'Nï¿½o foi possï¿½vel obter dados da conexï¿½o! Tentando novamente...';
             dados_ftp := False;
             Sleep(2);
           end
           else
           begin
-            if (Application.MessageBox(PChar('Não foi possível obter dados da conexão!'+#13#10+'Tentar novamente?'),fmIndex.TITULO,mb_yesno+MB_ICONERROR) <> 6) then
+            if (Application.MessageBox(PChar('Nï¿½o foi possï¿½vel obter dados da conexï¿½o!'+#13#10+'Tentar novamente?'),fmIndex.TITULO,mb_yesno+MB_ICONERROR) <> 6) then
             begin
               fmIndex.erro_log.Lines.Add(ret_ftp);
               fmIndex.erro_log.Lines.Add(url);
@@ -457,9 +457,9 @@ begin
 
   fmIndex.gravaLog('ftp_url: '+ftp_url);
   fmIndex.gravaLog('ftp_dir: '+ftp_dir);
-  fmIndex.gravaLog('ftp_porta: '+inttostr(ftp_porta));
-  fmIndex.gravaLog('ftp_usuario: '+ftp_usuario);
-  fmIndex.gravaLog('ftp_senha: *****************');
+//  fmIndex.gravaLog('ftp_porta: '+inttostr(ftp_porta));
+//  fmIndex.gravaLog('ftp_usuario: '+ftp_usuario);
+//  fmIndex.gravaLog('ftp_senha: *****************');
 
   sTitulo.Caption := 'Conectando ao servidor...';
   ftp_conecta();
@@ -470,7 +470,7 @@ begin
     Exit;
   end;
 
-  sTitulo.Caption := 'Obtendo informações dos arquivos...';
+  sTitulo.Caption := 'Obtendo informaï¿½ï¿½es dos arquivos...';
   try
     DM.qrARQUIVOS_SISTEMA.Close;
     DM.qrARQUIVOS_SISTEMA.Open;
