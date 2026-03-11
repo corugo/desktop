@@ -236,6 +236,9 @@ var
   arq:string;
   txt: TStringList;
   songId: Integer;
+  tagValue: Integer;
+  txtModo: string;
+  tocarAudio: Boolean;
 begin
   // Allow cross-origin requests from web applications
   AResponseInfo.CustomHeaders.Values['Access-Control-Allow-Origin'] := '*';
@@ -260,11 +263,21 @@ begin
     AResponseInfo.CharSet := 'utf-8';
     if TryStrToInt(ARequestInfo.Params.Values['id'], songId) then
     begin
+      if not TryStrToInt(ARequestInfo.Params.Values['tag'], tagValue) then
+        tagValue := 1;
+
+      if tagValue = 2 then
+        txtModo := 'PB'
+      else
+        txtModo := '';
+
+      tocarAudio := tagValue < 3;
+
       TThread.Queue(nil,
         procedure
         begin
           if Assigned(fmIndex) then
-            fmIndex.abreLetraMusica('BD', '', songId, True);
+            fmIndex.abreLetraMusica('BD', txtModo, songId, tocarAudio);
         end
       );
       AResponseInfo.ContentText :=
