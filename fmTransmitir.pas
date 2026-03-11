@@ -49,6 +49,10 @@ type
     btServidor: TbsSkinSpeedButton;
     btIPRede: TbsSkinSpeedButton;
     ckSrvAltIPPorta: TbsSkinCheckBox;
+    bsSkinPanel9: TbsSkinPanel;
+    bsSkinLabel7: TbsSkinLabel;
+    btCopLink: TbsSkinSpeedButton;
+    lblLink: TbsSkinLinkLabel;
     procedure seSrvUrlExit(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure IdHTTPServer1CommandGet(AContext: TIdContext;
@@ -62,6 +66,7 @@ type
     procedure btIPRedeClick(Sender: TObject);
     procedure ckSrvAltIPPortaClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
+    procedure btCopLinkClick(Sender: TObject);
   private
     { Private declarations }
     tentativaConexao: Integer;
@@ -93,6 +98,11 @@ begin
   Clipboard.AsText := lblLinkBib1.Caption;
 end;
 
+procedure TfTransmitir.btCopLinkClick(Sender: TObject);
+begin
+  Clipboard.AsText := lblLink.Caption;
+end;
+
 procedure TfTransmitir.btCopLinkMus1Click(Sender: TObject);
 begin
   Clipboard.AsText := lblLinkMus1.Caption;
@@ -119,6 +129,8 @@ begin
   IdHTTPServer1.Bindings.Clear;
   lblStatus.Caption := 'Desconectado';
 
+  lblLink.Caption := '';
+  lblLink.URL := lblLink.Caption;
   lblLinkMus1.Caption := '';
   lblLinkMus1.URL := lblLinkMus1.Caption;
   lblLinkMus2.Caption := '';
@@ -167,6 +179,8 @@ begin
       fmIndex.spServer.Caption := url;
       lblStatus.Caption := 'Conectado';
 
+      lblLink.Caption := url+'/';
+      lblLink.URL := lblLink.Caption;
       lblLinkMus1.Caption := url+'/musica?transmissao';
       lblLinkMus1.URL := lblLinkMus1.Caption;
       lblLinkMus2.Caption := url+'/musica?retorno';

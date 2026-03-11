@@ -3,7 +3,7 @@ object fTransmitir: TfTransmitir
   Top = 0
   BorderIcons = []
   Caption = 'Transmiss'#227'o'
-  ClientHeight = 326
+  ClientHeight = 371
   ClientWidth = 579
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -300,7 +300,6 @@ object fTransmitir: TfTransmitir
       Caption = 'Conectar automaticamente ao iniciar programa'
       OnClick = ckSrvConectarClick
       Align = alClient
-      ExplicitHeight = 24
     end
     object ckSrvAltIPPorta: TbsSkinCheckBox
       AlignWithMargins = True
@@ -338,7 +337,6 @@ object fTransmitir: TfTransmitir
       Caption = 'Alterar IP/Porta automaticamente em caso de falha na conex'#227'o'
       OnClick = ckSrvAltIPPortaClick
       Align = alBottom
-      ExplicitTop = 24
     end
   end
   object bsSkinPanel1: TbsSkinPanel
@@ -377,7 +375,6 @@ object fTransmitir: TfTransmitir
     Spacing = 2
     Caption = 'bsSkinPanel10'
     Align = alTop
-    ExplicitTop = 117
     object bsSkinLabel1: TbsSkinLabel
       AlignWithMargins = True
       Left = 5
@@ -449,7 +446,7 @@ object fTransmitir: TfTransmitir
   end
   object bsSkinPanel2: TbsSkinPanel
     Left = 0
-    Top = 195
+    Top = 219
     Width = 579
     Height = 24
     HintImageIndex = 0
@@ -483,7 +480,6 @@ object fTransmitir: TfTransmitir
     Spacing = 2
     Caption = 'bsSkinPanel10'
     Align = alTop
-    ExplicitTop = 165
     object lblLinkMus1: TbsSkinLinkLabel
       AlignWithMargins = True
       Left = 111
@@ -593,8 +589,8 @@ object fTransmitir: TfTransmitir
     end
   end
   object Memo1: TMemo
-    Left = 394
-    Top = 229
+    Left = 266
+    Top = 291
     Width = 185
     Height = 89
     Lines.Strings = (
@@ -604,7 +600,7 @@ object fTransmitir: TfTransmitir
   end
   object bsSkinPanel3: TbsSkinPanel
     Left = 0
-    Top = 219
+    Top = 243
     Width = 579
     Height = 24
     HintImageIndex = 0
@@ -638,7 +634,6 @@ object fTransmitir: TfTransmitir
     Spacing = 2
     Caption = 'bsSkinPanel10'
     Align = alTop
-    ExplicitTop = 189
     object lblLinkMus2: TbsSkinLinkLabel
       AlignWithMargins = True
       Left = 129
@@ -747,7 +742,7 @@ object fTransmitir: TfTransmitir
   end
   object bsSkinPanel4: TbsSkinPanel
     Left = 0
-    Top = 171
+    Top = 195
     Width = 579
     Height = 24
     HintImageIndex = 0
@@ -781,7 +776,6 @@ object fTransmitir: TfTransmitir
     Spacing = 2
     Caption = 'bsSkinPanel10'
     Align = alTop
-    ExplicitTop = 141
     object bsSkinLabel4: TbsSkinLabel
       AlignWithMargins = True
       Left = 5
@@ -819,7 +813,7 @@ object fTransmitir: TfTransmitir
   end
   object bsSkinPanel5: TbsSkinPanel
     Left = 0
-    Top = 243
+    Top = 267
     Width = 579
     Height = 24
     HintImageIndex = 0
@@ -853,7 +847,6 @@ object fTransmitir: TfTransmitir
     Spacing = 2
     Caption = 'bsSkinPanel10'
     Align = alTop
-    ExplicitTop = 213
     object bsSkinLabel5: TbsSkinLabel
       AlignWithMargins = True
       Left = 5
@@ -891,7 +884,7 @@ object fTransmitir: TfTransmitir
   end
   object bsSkinPanel6: TbsSkinPanel
     Left = 0
-    Top = 267
+    Top = 291
     Width = 579
     Height = 24
     HintImageIndex = 0
@@ -925,7 +918,6 @@ object fTransmitir: TfTransmitir
     Spacing = 2
     Caption = 'bsSkinPanel10'
     Align = alTop
-    ExplicitTop = 237
     object lblLinkBib1: TbsSkinLinkLabel
       AlignWithMargins = True
       Left = 111
@@ -1036,7 +1028,7 @@ object fTransmitir: TfTransmitir
   end
   object bsSkinPanel7: TbsSkinPanel
     Left = 0
-    Top = 284
+    Top = 329
     Width = 579
     Height = 42
     HintImageIndex = 0
@@ -1070,6 +1062,7 @@ object fTransmitir: TfTransmitir
     Spacing = 2
     Caption = 'bsSkinPanel1'
     Align = alBottom
+    ExplicitTop = 367
     object bsSkinButton2: TbsSkinButton
       AlignWithMargins = True
       Left = 482
@@ -1233,6 +1226,150 @@ object fTransmitir: TfTransmitir
       Margin = 5
       Spacing = 1
       OnClick = btIPRedeClick
+    end
+  end
+  object bsSkinPanel9: TbsSkinPanel
+    Left = 0
+    Top = 171
+    Width = 579
+    Height = 24
+    HintImageIndex = 0
+    TabOrder = 11
+    SkinData = DM.bsSkinData1
+    SkinDataName = 'panel'
+    DefaultFont.Charset = DEFAULT_CHARSET
+    DefaultFont.Color = clWindowText
+    DefaultFont.Height = 13
+    DefaultFont.Name = 'Tahoma'
+    DefaultFont.Style = []
+    DefaultWidth = 0
+    DefaultHeight = 0
+    UseSkinFont = True
+    EmptyDrawing = False
+    RibbonStyle = False
+    ImagePosition = bsipDefault
+    TransparentMode = False
+    CaptionImageIndex = 0
+    RealHeight = -1
+    AutoEnabledControls = True
+    CheckedMode = False
+    Checked = False
+    DefaultAlignment = taLeftJustify
+    DefaultCaptionHeight = 20
+    BorderStyle = bvNone
+    CaptionMode = False
+    RollUpMode = False
+    RollUpState = False
+    NumGlyphs = 1
+    Spacing = 2
+    Caption = 'bsSkinPanel10'
+    Align = alTop
+    object btCopLink: TbsSkinSpeedButton
+      Left = 488
+      Top = 0
+      Width = 91
+      Height = 24
+      HintImageIndex = 0
+      SkinData = DM.bsSkinData1
+      SkinDataName = 'resizetoolbutton'
+      DefaultFont.Charset = DEFAULT_CHARSET
+      DefaultFont.Color = clWindowText
+      DefaultFont.Height = 13
+      DefaultFont.Name = 'Tahoma'
+      DefaultFont.Style = []
+      DefaultWidth = 0
+      DefaultHeight = 0
+      UseSkinFont = True
+      CheckedMode = False
+      ImageList = DM.ico_16x16
+      UseSkinSize = True
+      UseSkinFontColor = True
+      WidthWithCaption = 0
+      WidthWithoutCaption = 0
+      ImageIndex = 54
+      RepeatMode = False
+      RepeatInterval = 100
+      Transparent = True
+      Flat = True
+      AllowAllUp = False
+      Down = False
+      GroupIndex = 0
+      Caption = 'Copiar Link'
+      ShowCaption = True
+      NumGlyphs = 1
+      Align = alRight
+      Margin = 5
+      Spacing = 1
+      OnClick = btCopLinkClick
+      ExplicitLeft = 491
+      ExplicitTop = -3
+    end
+    object lblLink: TbsSkinLinkLabel
+      AlignWithMargins = True
+      Left = 42
+      Top = 3
+      Width = 443
+      Height = 18
+      Cursor = crHandPoint
+      Margins.Left = 5
+      GlowEffect = False
+      GlowSize = 7
+      UseUnderLine = True
+      UseSkinFont = True
+      DefaultActiveFontColor = clBlue
+      DefaultFont.Charset = DEFAULT_CHARSET
+      DefaultFont.Color = clWindowText
+      DefaultFont.Height = 13
+      DefaultFont.Name = 'Tahoma'
+      DefaultFont.Style = [fsUnderline]
+      SkinData = DM.bsSkinData1
+      SkinDataName = 'stdlabel'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = 13
+      Font.Name = 'Tahoma'
+      Font.Style = [fsUnderline]
+      Align = alClient
+      AutoSize = False
+      ParentFont = False
+      Layout = tlCenter
+      ExplicitLeft = 78
+      ExplicitWidth = 139
+      ExplicitHeight = 17
+    end
+    object bsSkinLabel7: TbsSkinLabel
+      AlignWithMargins = True
+      Left = 5
+      Top = 3
+      Width = 29
+      Height = 18
+      Margins.Left = 5
+      HintImageIndex = 0
+      TabOrder = 0
+      SkinData = DM.bsSkinData1
+      SkinDataName = 'label'
+      DefaultFont.Charset = DEFAULT_CHARSET
+      DefaultFont.Color = clWindowText
+      DefaultFont.Height = 13
+      DefaultFont.Name = 'Tahoma'
+      DefaultFont.Style = []
+      DefaultWidth = 0
+      DefaultHeight = 0
+      UseSkinFont = True
+      Transparent = False
+      ShadowEffect = False
+      ShadowColor = clBlack
+      ShadowOffset = 0
+      ShadowSize = 3
+      ReflectionEffect = False
+      ReflectionOffset = -5
+      EllipsType = bsetNoneEllips
+      UseSkinSize = True
+      UseSkinFontColor = True
+      BorderStyle = bvNone
+      Align = alLeft
+      Caption = 'Link: '
+      AutoSize = True
     end
   end
   object bsBusinessSkinForm1: TbsBusinessSkinForm
