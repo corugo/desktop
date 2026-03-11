@@ -3,8 +3,8 @@ object fTransmitir: TfTransmitir
   Top = 0
   BorderIcons = []
   Caption = 'Transmiss'#227'o'
-  ClientHeight = 371
-  ClientWidth = 579
+  ClientHeight = 373
+  ClientWidth = 628
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -22,7 +22,7 @@ object fTransmitir: TfTransmitir
   object bsRibbonDivider53: TbsRibbonDivider
     Left = 0
     Top = 135
-    Width = 579
+    Width = 628
     Height = 12
     Margins.Left = 30
     Margins.Top = 0
@@ -34,11 +34,12 @@ object fTransmitir: TfTransmitir
     DividerType = bsdtHorizontalLine
     Align = alTop
     ExplicitTop = 69
+    ExplicitWidth = 579
   end
   object GridPanel77: TGridPanel
     Left = 0
     Top = 0
-    Width = 579
+    Width = 628
     Height = 45
     Align = alTop
     BevelOuter = bvNone
@@ -50,6 +51,10 @@ object fTransmitir: TfTransmitir
       item
         SizeStyle = ssAbsolute
         Value = 100.000000000000000000
+      end
+      item
+        SizeStyle = ssAbsolute
+        Value = 150.000000000000000000
       end>
     ControlCollection = <
       item
@@ -61,6 +66,11 @@ object fTransmitir: TfTransmitir
         Column = 1
         Control = Panel59
         Row = 0
+      end
+      item
+        Column = 2
+        Control = Panel1
+        Row = 0
       end>
     RowCollection = <
       item
@@ -71,7 +81,7 @@ object fTransmitir: TfTransmitir
     object Panel58: TPanel
       Left = 0
       Top = 0
-      Width = 479
+      Width = 378
       Height = 45
       Align = alClient
       BevelOuter = bvNone
@@ -82,7 +92,7 @@ object fTransmitir: TfTransmitir
         AlignWithMargins = True
         Left = 5
         Top = 5
-        Width = 464
+        Width = 363
         Height = 15
         Margins.Left = 5
         Margins.Top = 5
@@ -110,7 +120,7 @@ object fTransmitir: TfTransmitir
         AlignWithMargins = True
         Left = 5
         Top = 20
-        Width = 469
+        Width = 368
         Height = 20
         Margins.Left = 5
         Margins.Top = 0
@@ -148,7 +158,7 @@ object fTransmitir: TfTransmitir
       end
     end
     object Panel59: TPanel
-      Left = 479
+      Left = 378
       Top = 0
       Width = 100
       Height = 45
@@ -227,11 +237,90 @@ object fTransmitir: TfTransmitir
         RightImageDownIndex = -1
       end
     end
+    object Panel1: TPanel
+      Left = 478
+      Top = 0
+      Width = 150
+      Height = 45
+      Align = alClient
+      BevelOuter = bvNone
+      Caption = 'Panel2'
+      ShowCaption = False
+      TabOrder = 2
+      object bsSkinStdLabel1: TbsSkinStdLabel
+        AlignWithMargins = True
+        Left = 5
+        Top = 5
+        Width = 135
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 10
+        Margins.Bottom = 0
+        EllipsType = bsetNone
+        UseSkinFont = True
+        UseSkinColor = True
+        DefaultFont.Charset = DEFAULT_CHARSET
+        DefaultFont.Color = clWindowText
+        DefaultFont.Height = 13
+        DefaultFont.Name = 'Tahoma'
+        DefaultFont.Style = []
+        SkinData = DM.bsSkinData1
+        SkinDataName = 'stdlabel'
+        Align = alTop
+        AutoSize = False
+        Caption = 'Token (conex'#227'o remota):'
+        Layout = tlCenter
+        ExplicitLeft = 10
+        ExplicitTop = 13
+        ExplicitWidth = 105
+      end
+      object seSrvToken: TbsSkinEdit
+        AlignWithMargins = True
+        Left = 5
+        Top = 20
+        Width = 140
+        Height = 20
+        Margins.Left = 5
+        Margins.Top = 0
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Text = ''
+        DefaultColor = clWindow
+        DefaultFont.Charset = DEFAULT_CHARSET
+        DefaultFont.Color = clBlack
+        DefaultFont.Height = 13
+        DefaultFont.Name = 'Tahoma'
+        DefaultFont.Style = []
+        UseSkinFont = True
+        DefaultWidth = 0
+        DefaultHeight = 0
+        ButtonMode = False
+        SkinData = DM.bsSkinData1
+        SkinDataName = 'edit'
+        Align = alClient
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clBlack
+        Font.Height = 13
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 0
+        ButtonImageIndex = -1
+        LeftImageIndex = -1
+        LeftImageHotIndex = -1
+        LeftImageDownIndex = -1
+        RightImageIndex = -1
+        RightImageHotIndex = -1
+        RightImageDownIndex = -1
+        OnExit = seSrvTokenExit
+      end
+    end
   end
   object bsSkinPanel53: TbsSkinPanel
     Left = 0
     Top = 81
-    Width = 579
+    Width = 628
     Height = 54
     HintImageIndex = 0
     TabOrder = 1
@@ -268,7 +357,7 @@ object fTransmitir: TfTransmitir
       AlignWithMargins = True
       Left = 10
       Top = 0
-      Width = 569
+      Width = 618
       Height = 21
       Margins.Left = 10
       Margins.Top = 0
@@ -305,7 +394,7 @@ object fTransmitir: TfTransmitir
       AlignWithMargins = True
       Left = 10
       Top = 21
-      Width = 569
+      Width = 618
       Height = 33
       Margins.Left = 10
       Margins.Top = 0
@@ -342,7 +431,7 @@ object fTransmitir: TfTransmitir
   object bsSkinPanel1: TbsSkinPanel
     Left = 0
     Top = 147
-    Width = 579
+    Width = 628
     Height = 24
     HintImageIndex = 0
     TabOrder = 2
@@ -413,7 +502,7 @@ object fTransmitir: TfTransmitir
       AlignWithMargins = True
       Left = 55
       Top = 3
-      Width = 521
+      Width = 570
       Height = 18
       Margins.Left = 5
       HintImageIndex = 0
@@ -447,7 +536,7 @@ object fTransmitir: TfTransmitir
   object bsSkinPanel2: TbsSkinPanel
     Left = 0
     Top = 219
-    Width = 579
+    Width = 628
     Height = 24
     HintImageIndex = 0
     TabOrder = 3
@@ -484,7 +573,7 @@ object fTransmitir: TfTransmitir
       AlignWithMargins = True
       Left = 111
       Top = 3
-      Width = 374
+      Width = 423
       Height = 18
       Cursor = crHandPoint
       Margins.Left = 5
@@ -514,7 +603,7 @@ object fTransmitir: TfTransmitir
       ExplicitHeight = 17
     end
     object btCopLinkMus1: TbsSkinSpeedButton
-      Left = 488
+      Left = 537
       Top = 0
       Width = 91
       Height = 24
@@ -588,20 +677,10 @@ object fTransmitir: TfTransmitir
       AutoSize = True
     end
   end
-  object Memo1: TMemo
-    Left = 266
-    Top = 291
-    Width = 185
-    Height = 89
-    Lines.Strings = (
-      '[SERVER]')
-    TabOrder = 4
-    Visible = False
-  end
   object bsSkinPanel3: TbsSkinPanel
     Left = 0
     Top = 243
-    Width = 579
+    Width = 628
     Height = 24
     HintImageIndex = 0
     TabOrder = 5
@@ -638,7 +717,7 @@ object fTransmitir: TfTransmitir
       AlignWithMargins = True
       Left = 129
       Top = 3
-      Width = 356
+      Width = 405
       Height = 18
       Cursor = crHandPoint
       Margins.Left = 5
@@ -668,7 +747,7 @@ object fTransmitir: TfTransmitir
       ExplicitHeight = 17
     end
     object btCopLinkMus2: TbsSkinSpeedButton
-      Left = 488
+      Left = 537
       Top = 0
       Width = 91
       Height = 24
@@ -704,6 +783,7 @@ object fTransmitir: TfTransmitir
       Margin = 5
       Spacing = 1
       OnClick = btCopLinkMus2Click
+      ExplicitLeft = 488
     end
     object bsSkinLabel3: TbsSkinLabel
       AlignWithMargins = True
@@ -743,7 +823,7 @@ object fTransmitir: TfTransmitir
   object bsSkinPanel4: TbsSkinPanel
     Left = 0
     Top = 195
-    Width = 579
+    Width = 628
     Height = 24
     HintImageIndex = 0
     TabOrder = 6
@@ -780,7 +860,7 @@ object fTransmitir: TfTransmitir
       AlignWithMargins = True
       Left = 5
       Top = 3
-      Width = 571
+      Width = 620
       Height = 18
       Margins.Left = 5
       HintImageIndex = 0
@@ -814,7 +894,7 @@ object fTransmitir: TfTransmitir
   object bsSkinPanel5: TbsSkinPanel
     Left = 0
     Top = 267
-    Width = 579
+    Width = 628
     Height = 24
     HintImageIndex = 0
     TabOrder = 7
@@ -851,7 +931,7 @@ object fTransmitir: TfTransmitir
       AlignWithMargins = True
       Left = 5
       Top = 3
-      Width = 571
+      Width = 620
       Height = 18
       Margins.Left = 5
       HintImageIndex = 0
@@ -885,7 +965,7 @@ object fTransmitir: TfTransmitir
   object bsSkinPanel6: TbsSkinPanel
     Left = 0
     Top = 291
-    Width = 579
+    Width = 628
     Height = 24
     HintImageIndex = 0
     TabOrder = 8
@@ -922,7 +1002,7 @@ object fTransmitir: TfTransmitir
       AlignWithMargins = True
       Left = 111
       Top = 3
-      Width = 374
+      Width = 423
       Height = 18
       Cursor = crHandPoint
       Margins.Left = 5
@@ -952,7 +1032,7 @@ object fTransmitir: TfTransmitir
       ExplicitHeight = 17
     end
     object btCopLinkBib1: TbsSkinSpeedButton
-      Left = 488
+      Left = 537
       Top = 0
       Width = 91
       Height = 24
@@ -1028,8 +1108,8 @@ object fTransmitir: TfTransmitir
   end
   object bsSkinPanel7: TbsSkinPanel
     Left = 0
-    Top = 329
-    Width = 579
+    Top = 331
+    Width = 628
     Height = 42
     HintImageIndex = 0
     TabOrder = 9
@@ -1062,10 +1142,9 @@ object fTransmitir: TfTransmitir
     Spacing = 2
     Caption = 'bsSkinPanel1'
     Align = alBottom
-    ExplicitTop = 367
     object bsSkinButton2: TbsSkinButton
       AlignWithMargins = True
-      Left = 482
+      Left = 531
       Top = 5
       Width = 92
       Height = 32
@@ -1109,7 +1188,7 @@ object fTransmitir: TfTransmitir
   object bsSkinPanel8: TbsSkinPanel
     Left = 0
     Top = 45
-    Width = 579
+    Width = 628
     Height = 36
     HintImageIndex = 0
     TabOrder = 10
@@ -1144,7 +1223,7 @@ object fTransmitir: TfTransmitir
     Align = alTop
     object btServidor: TbsSkinSpeedButton
       AlignWithMargins = True
-      Left = 424
+      Left = 473
       Top = 5
       Width = 150
       Height = 26
@@ -1184,12 +1263,13 @@ object fTransmitir: TfTransmitir
       Margin = 5
       Spacing = 1
       OnClick = btServidorClick
+      ExplicitLeft = 424
     end
     object btIPRede: TbsSkinSpeedButton
       AlignWithMargins = True
-      Left = 320
+      Left = 360
       Top = 5
-      Width = 94
+      Width = 103
       Height = 26
       Margins.Left = 5
       Margins.Top = 5
@@ -1227,11 +1307,54 @@ object fTransmitir: TfTransmitir
       Spacing = 1
       OnClick = btIPRedeClick
     end
+    object bsSkinSpeedButton1: TbsSkinSpeedButton
+      AlignWithMargins = True
+      Left = 239
+      Top = 5
+      Width = 111
+      Height = 26
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      Margins.Bottom = 5
+      HintImageIndex = 0
+      SkinData = DM.bsSkinData1
+      SkinDataName = 'resizetoolbutton'
+      DefaultFont.Charset = DEFAULT_CHARSET
+      DefaultFont.Color = clWindowText
+      DefaultFont.Height = 13
+      DefaultFont.Name = 'Tahoma'
+      DefaultFont.Style = []
+      DefaultWidth = 0
+      DefaultHeight = 0
+      UseSkinFont = True
+      CheckedMode = False
+      UseSkinSize = True
+      UseSkinFontColor = True
+      WidthWithCaption = 0
+      WidthWithoutCaption = 0
+      ImageIndex = 0
+      RepeatMode = False
+      RepeatInterval = 100
+      Transparent = True
+      Flat = True
+      AllowAllUp = False
+      Down = False
+      GroupIndex = 0
+      Caption = 'Gerar Novo Token'
+      ShowCaption = True
+      NumGlyphs = 1
+      Align = alRight
+      Margin = 5
+      Spacing = 1
+      OnClick = bsSkinSpeedButton1Click
+      ExplicitLeft = 248
+    end
   end
   object bsSkinPanel9: TbsSkinPanel
     Left = 0
     Top = 171
-    Width = 579
+    Width = 628
     Height = 24
     HintImageIndex = 0
     TabOrder = 11
@@ -1265,7 +1388,7 @@ object fTransmitir: TfTransmitir
     Caption = 'bsSkinPanel10'
     Align = alTop
     object btCopLink: TbsSkinSpeedButton
-      Left = 488
+      Left = 537
       Top = 0
       Width = 91
       Height = 24
@@ -1308,7 +1431,7 @@ object fTransmitir: TfTransmitir
       AlignWithMargins = True
       Left = 42
       Top = 3
-      Width = 443
+      Width = 492
       Height = 18
       Cursor = crHandPoint
       Margins.Left = 5
@@ -1371,6 +1494,16 @@ object fTransmitir: TfTransmitir
       Caption = 'Link: '
       AutoSize = True
     end
+  end
+  object Memo1: TMemo
+    Left = 297
+    Top = 141
+    Width = 185
+    Height = 89
+    Lines.Strings = (
+      '[SERVER]')
+    TabOrder = 4
+    Visible = False
   end
   object bsBusinessSkinForm1: TbsBusinessSkinForm
     UseRibbon = False

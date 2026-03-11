@@ -286,6 +286,8 @@ begin
   AppCreateForm(TfTransmitir, fTransmitir);
   fTransmitir.seSrvUrl.Text := fmIndex.lerParam('Servidor', 'URL', fmIndex.GetIP());
   fTransmitir.seSrvPorta.Text := fmIndex.lerParam('Servidor', 'Porta', '7070');
+  fTransmitir.seSrvToken.Text := fmIndex.lerParam('Servidor', 'Token', fTransmitir.geraToken());
+  fTransmitir.seSrvToken.OnExit(nil);
   fTransmitir.ckSrvConectar.Checked := (fmIndex.lerParam('Servidor', 'Conectar', '0') = '1');
   fTransmitir.ckSrvAltIPPorta.Checked := (fmIndex.lerParam('Servidor', 'AltPortaIP', '1') = '1');
 

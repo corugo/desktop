@@ -53,6 +53,10 @@ type
     bsSkinLabel7: TbsSkinLabel;
     btCopLink: TbsSkinSpeedButton;
     lblLink: TbsSkinLinkLabel;
+    Panel1: TPanel;
+    bsSkinStdLabel1: TbsSkinStdLabel;
+    seSrvToken: TbsSkinEdit;
+    bsSkinSpeedButton1: TbsSkinSpeedButton;
     procedure seSrvUrlExit(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure IdHTTPServer1CommandGet(AContext: TIdContext;
@@ -67,6 +71,9 @@ type
     procedure ckSrvAltIPPortaClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure btCopLinkClick(Sender: TObject);
+    function geraToken():string;
+    procedure seSrvTokenExit(Sender: TObject);
+    procedure bsSkinSpeedButton1Click(Sender: TObject);
   private
     { Private declarations }
     tentativaConexao: Integer;
@@ -91,6 +98,12 @@ end;
 procedure TfTransmitir.btIPRedeClick(Sender: TObject);
 begin
   seSrvUrl.Text := fmIndex.GetIP;
+end;
+
+procedure TfTransmitir.bsSkinSpeedButton1Click(Sender: TObject);
+begin
+  seSrvToken.Text := geraToken();
+  fmIndex.gravaParam('Servidor', 'Token', seSrvToken.Text);
 end;
 
 procedure TfTransmitir.btCopLinkBib1Click(Sender: TObject);
@@ -122,6 +135,7 @@ begin
 
   seSrvUrl.Enabled := True;
   seSrvPorta.Enabled := True;
+  seSrvToken.Enabled := True;
   btIPRede.Enabled := True;
   fmIndex.spServer.Caption := '';
   btServidor.Enabled := False;
@@ -153,6 +167,10 @@ begin
       then seSrvPorta.Text := '7070';
     if (StrToInt(seSrvPorta.Text) <= 0)
       then seSrvPorta.Text := '7070';
+    if (trim(seSrvToken.Text) = '')
+      then seSrvToken.Text := geraToken();
+
+
     IdHTTPServer1.DefaultPort := StrToInt(seSrvPorta.Text);
     Binding := IdHTTPServer1.Bindings.Add;
     Binding.Port := IdHTTPServer1.DefaultPort;
@@ -171,9 +189,11 @@ begin
       btServidor.Caption := 'Desconectar Servidor';
       seSrvUrl.Enabled := False;
       seSrvPorta.Enabled := False;
+      seSrvToken.Enabled := False;
       btIPRede.Enabled := False;
       fmIndex.gravaParam('Servidor', 'URL', seSrvUrl.Text);
       fmIndex.gravaParam('Servidor', 'Porta', seSrvPorta.Text);
+      fmIndex.gravaParam('Servidor', 'Token', seSrvToken.Text);
 
       url := 'http://'+seSrvUrl.Text+':'+seSrvPorta.Text;
       fmIndex.spServer.Caption := url;
@@ -243,6 +263,18 @@ begin
   fmIndex.FormKeyUp(Sender, Key, Shift);
 end;
 
+function TfTransmitir.geraToken: string;
+const
+  CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+var
+  i: Integer;
+begin
+  Randomize;
+  Result := '';
+  for i := 1 to 5 do
+    Result := Result + CHARS[Random(Length(CHARS)) + 1];
+end;
+
 procedure TfTransmitir.IdHTTPServer1CommandGet(AContext: TIdContext;
   ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
@@ -265,6 +297,13 @@ begin
   begin
     AResponseInfo.ContentType := 'application/json';
     AResponseInfo.CharSet := 'utf-8';
+
+    if (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
+    begin
+      AResponseInfo.ContentText := '{"status":"error","message":"Invalid token","code":"INVALID_TOKEN"}';
+      Exit;
+    end;
+
     AResponseInfo.ContentText := '{"status":"ok","app":"LouvorJA"}';
     Exit;
   end;
@@ -275,6 +314,13 @@ begin
   begin
     AResponseInfo.ContentType := 'application/json';
     AResponseInfo.CharSet := 'utf-8';
+
+    if (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
+    begin
+      AResponseInfo.ContentText := '{"status":"error","message":"Invalid token","code":"INVALID_TOKEN"}';
+      Exit;
+    end;
+
     if TryStrToInt(ARequestInfo.Params.Values['id'], songId) then
     begin
       if not TryStrToInt(ARequestInfo.Params.Values['tag'], tagValue) then
@@ -301,7 +347,7 @@ begin
     begin
       AResponseInfo.ResponseNo := 400;
       AResponseInfo.ContentText :=
-        '{"status":"error","message":"Missing or invalid song ID. Usage: /api/open-song?id=123"}';
+        '{"status":"error","message":"Missing or invalid song ID. Usage: /api/open-song?id=123","code":"MISSING_ID"}';
     end;
     Exit;
   end;
@@ -325,6 +371,11 @@ begin
   finally
     txt.Free;
   end;
+end;
+
+procedure TfTransmitir.seSrvTokenExit(Sender: TObject);
+begin
+  fmIndex.gravaParam('Servidor', 'Token', seSrvToken.Text);
 end;
 
 procedure TfTransmitir.seSrvUrlExit(Sender: TObject);
