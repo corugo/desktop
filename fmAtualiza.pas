@@ -1,4 +1,4 @@
-unit fmAtualiza;
+﻿unit fmAtualiza;
 
 interface
 
@@ -81,7 +81,7 @@ begin
     arq := i;
     if not IdFTP1.Connected then
     begin
-      sTitulo.Caption := 'Conex�o perdida... Reconectando...';
+      sTitulo.Caption := 'Conexão perdida... Reconectando...';
       ftp_conecta();
     end;
 
@@ -174,10 +174,10 @@ begin
       if (Pos('too many connections', LowerCase(E.Message)) > 0) or
          (Pos('servidor sobrecarregado', LowerCase(E.Message)) > 0) then
       begin
-        msg := 'O servidor est�s sobrecarregado. Muitos usu�rios est�o atualizando os arquivos neste momento. Tente novamente em alguns minutos!'+#13#10;
+        msg := 'O servidor está sobrecarregado. Muitos usuários estão atualizando os arquivos neste momento. Tente novamente em alguns minutos!'+#13#10;
       end;
 
-      if (Application.MessageBox(PChar('N�o foi poss�vel conectar ao servidor!'
+      if (Application.MessageBox(PChar('Não foi possível conectar ao servidor!'
           +#13#10
           +msg
           +#13#10
@@ -285,7 +285,7 @@ begin
 
   fmIndex.gravaLog('Conectando FTP');
 
-  sTitulo.Caption := 'Buscando informa��es...';
+  sTitulo.Caption := 'Buscando informações...';
   pbProgresso.Style := pbstMarquee;
 
   fmIndex.gravaLog('URL: '+fmIndex.url_params);
@@ -298,7 +298,7 @@ begin
     try
       LinkPag := DM.IdHTTP1.Get(fmIndex.url_params);
     except
-      Application.MessageBox(PChar('N�o foi poss�vel se conectar!'),fmIndex.TITULO,mb_ok+MB_ICONERROR);
+      Application.MessageBox(PChar('Não foi possível se conectar!'),fmIndex.TITULO,mb_ok+MB_ICONERROR);
       tmrFecha.Enabled := True;
       erro := True;
       Exit;
@@ -313,7 +313,7 @@ begin
 
   if (fmIndex.param.Strings.Values['conn_ftp'] = '') then
   begin
-    Application.MessageBox(PChar('N�o foi poss�vel buscar informa��es de conex�o!'),fmIndex.TITULO,mb_ok+MB_ICONERROR);
+    Application.MessageBox(PChar('Não foi possível buscar informações de conexão!'),fmIndex.TITULO,mb_ok+MB_ICONERROR);
     tmrFecha.Enabled := True;
     erro := True;
     Exit;
@@ -347,7 +347,7 @@ begin
       else
         url := fmIndex.param.Strings.Values['conn_ftp']+'?data='+DM.IdEncoderMIME.EncodeString(lParams)+'&lang='+fIniciando.LANG;
 
-      fmIndex.gravaLog('URL para autoriza��o de conex�o: '+url);
+      fmIndex.gravaLog('URL para autorização de conexão: '+url);
 
       while (tmrFecha.Enabled = False) and (dados_ftp = False)  do
       begin
@@ -359,7 +359,7 @@ begin
           on E: Exception do
           begin
             dados_ftp := False;
-            if (Application.MessageBox(PChar('N�o foi poss�vel obter dados FTP! O servidor pode estar indispon�vel, ou o programa n�o possui permiss�es de acesso � internet.'+#13#10+'Causa do erro: '+E.Message+#13#10+'Tentar novamente?'),fmIndex.TITULO,mb_yesno+MB_ICONERROR) <> 6) then
+            if (Application.MessageBox(PChar('Não foi possível obter dados FTP! O servidor pode estar indisponível, ou o programa não possui permissões de acesso à internet.'+#13#10+'Causa do erro: '+E.Message+#13#10+'Tentar novamente?'),fmIndex.TITULO,mb_yesno+MB_ICONERROR) <> 6) then
             begin
               fmIndex.erro_log.Lines.Add(E.Message);
               fmIndex.erro_log.Lines.Add(url);
@@ -392,13 +392,13 @@ begin
         begin
           if (tentat <= 5) then
           begin
-            sTitulo.Caption := 'N�o foi poss�vel obter dados da conex�o! Tentando novamente...';
+            sTitulo.Caption := 'Não foi possível obter dados da conexão! Tentando novamente...';
             dados_ftp := False;
             Sleep(2);
           end
           else
           begin
-            if (Application.MessageBox(PChar('N�o foi poss�vel obter dados da conex�o!'+#13#10+'Tentar novamente?'),fmIndex.TITULO,mb_yesno+MB_ICONERROR) <> 6) then
+            if (Application.MessageBox(PChar('Não foi possível obter dados da conexão!'+#13#10+'Tentar novamente?'),fmIndex.TITULO,mb_yesno+MB_ICONERROR) <> 6) then
             begin
               fmIndex.erro_log.Lines.Add(ret_ftp);
               fmIndex.erro_log.Lines.Add(url);
@@ -470,7 +470,7 @@ begin
     Exit;
   end;
 
-  sTitulo.Caption := 'Obtendo informa��es dos arquivos...';
+  sTitulo.Caption := 'Obtendo informações dos arquivos...';
   try
     DM.qrARQUIVOS_SISTEMA.Close;
     DM.qrARQUIVOS_SISTEMA.Open;
