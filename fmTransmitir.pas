@@ -340,7 +340,7 @@ begin
       Exit;
     end;
 
-    if (ARequestInfo.Params.Values['get-last'] <> 'get-last') then
+    if (ARequestInfo.Params.Values['action'] = 'get-last') then
     begin
       attemptCount := 0;
       success := False;
@@ -366,7 +366,14 @@ begin
         AResponseInfo.ContentText := '{"status":"error","message":"Failed after 3 attempts, button not enabled","code":"BUTTON_NOT_ENABLED"}';
       end;
       Exit;
+    end
+    else if (ARequestInfo.Params.Values['action'] = 'draw') then
+    begin
+      fmIndex.btSortearClick(fmIndex.btSortear);
+      AResponseInfo.ContentText := '{"status":"ok","action":"get-last","message":"Sorteando número"}';
+      Exit;
     end;
+    Exit;
   end;
 
   // API: Control Drawing name
@@ -381,7 +388,7 @@ begin
       Exit;
     end;
 
-    if (ARequestInfo.Params.Values['get-last'] <> 'get-last') then
+    if (ARequestInfo.Params.Values['action'] = 'get-last') then
     begin
       attemptCount := 0;
       success := False;
@@ -407,7 +414,14 @@ begin
         AResponseInfo.ContentText := '{"status":"error","message":"Failed after 3 attempts, button not enabled","code":"BUTTON_NOT_ENABLED"}';
       end;
       Exit;
+    end
+    else if (ARequestInfo.Params.Values['action'] = 'draw') then
+    begin
+      fmIndex.btSortearNMClick(fmIndex.btSortearNM);
+      AResponseInfo.ContentText := '{"status":"ok","action":"get-last","message":"Sorteando nome"}';
+      Exit;
     end;
+    Exit;
   end;
 
   // API: Open a song slide by its database ID
