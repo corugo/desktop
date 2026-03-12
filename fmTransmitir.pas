@@ -308,6 +308,17 @@ begin
     Exit;
   end;
 
+  // API: Gets the time of the computer where Louvor JA is
+  if arq = '/api/clock' then
+  begin
+    AResponseInfo.ContentType := 'application/json';
+    AResponseInfo.CharSet := 'utf-8';
+
+    AResponseInfo.ContentText :=
+      '{"status":"ok","hour":"' + formatdatetime('hh:mm:ss', now()) + '"}';
+    Exit;
+  end;
+
   // API: Open a song slide by its database ID
   // Usage: GET /api/open-song?id=123
   if arq = '/api/open-song' then
