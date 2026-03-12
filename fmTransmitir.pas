@@ -285,6 +285,9 @@ var
   tagValue: Integer;
   txtModo: string;
   tocarAudio: Boolean;
+  messageDraw: string;
+  attemptCount: Integer;
+  success: Boolean;
 begin
   // Allow cross-origin requests from web applications
   AResponseInfo.CustomHeaders.Values['Access-Control-Allow-Origin'] := '*';
@@ -314,9 +317,97 @@ begin
     AResponseInfo.ContentType := 'application/json';
     AResponseInfo.CharSet := 'utf-8';
 
+    if (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
+    begin
+      AResponseInfo.ContentText := '{"status":"error","message":"Invalid token","code":"INVALID_TOKEN"}';
+      Exit;
+    end;
+
     AResponseInfo.ContentText :=
       '{"status":"ok","hour":"' + formatdatetime('hh:mm:ss', now()) + '"}';
     Exit;
+  end;
+
+  // API: Control Drawing number
+  if arq = '/api/drawing-number' then
+  begin
+    AResponseInfo.ContentType := 'application/json';
+    AResponseInfo.CharSet := 'utf-8';
+
+    if (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
+    begin
+      AResponseInfo.ContentText := '{"status":"error","message":"Invalid token","code":"INVALID_TOKEN"}';
+      Exit;
+    end;
+
+    if (ARequestInfo.Params.Values['get-last'] <> 'get-last') then
+    begin
+      attemptCount := 0;
+      success := False;
+
+      while (attemptCount < 3) do
+      begin
+        if (fmIndex.btSortear.Enabled) then
+        begin
+          messageDraw := fmIndex.lmdSorteio.Caption;
+          AResponseInfo.ContentText := '{"status":"ok","action":"get-last","message":"' + messageDraw + '"}';
+          success := True;
+          Break;
+        end
+        else
+        begin
+          Inc(attemptCount);
+          Sleep(1000);
+        end;
+      end;
+
+      if not success then
+      begin
+        AResponseInfo.ContentText := '{"status":"error","message":"Failed after 3 attempts, button not enabled","code":"BUTTON_NOT_ENABLED"}';
+      end;
+      Exit;
+    end;
+  end;
+
+  // API: Control Drawing name
+  if arq = '/api/drawing-name' then
+  begin
+    AResponseInfo.ContentType := 'application/json';
+    AResponseInfo.CharSet := 'utf-8';
+
+    if (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
+    begin
+      AResponseInfo.ContentText := '{"status":"error","message":"Invalid token","code":"INVALID_TOKEN"}';
+      Exit;
+    end;
+
+    if (ARequestInfo.Params.Values['get-last'] <> 'get-last') then
+    begin
+      attemptCount := 0;
+      success := False;
+
+      while (attemptCount < 3) do
+      begin
+        if (fmIndex.btSortearNM.Enabled) then
+        begin
+          messageDraw := fmIndex.lmdSorteioNM.Caption;
+          AResponseInfo.ContentText := '{"status":"ok","action":"get-last","message":"' + messageDraw + '"}';
+          success := True;
+          Break;
+        end
+        else
+        begin
+          Inc(attemptCount);
+          Sleep(1000);
+        end;
+      end;
+
+      if not success then
+      begin
+        AResponseInfo.ContentText := '{"status":"error","message":"Failed after 3 attempts, button not enabled","code":"BUTTON_NOT_ENABLED"}';
+      end;
+      Exit;
+    end;
   end;
 
   // API: Open a song slide by its database ID
