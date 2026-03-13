@@ -88,7 +88,8 @@ implementation
 
 {$R *.dfm}
 
-uses fmMenu;
+uses
+  fmMusica,fmMenu;
 
 procedure TfTransmitir.bsSkinButton2Click(Sender: TObject);
 begin
@@ -199,7 +200,7 @@ begin
       fmIndex.spServer.Caption := url;
       lblStatus.Caption := 'Conectado';
 
-      lblLink.Caption := url+'/';
+      lblLink.Caption := url;
       lblLink.URL := lblLink.Caption;
       lblLinkMus1.Caption := url+'/musica?transmissao';
       lblLinkMus1.URL := lblLinkMus1.Caption;
@@ -308,6 +309,88 @@ begin
     end;
 
     AResponseInfo.ContentText := '{"status":"ok","app":"LouvorJA"}';
+    Exit;
+  end;
+
+  // API: Change to next slide or previous slide and get status slides
+  if arq = '/api/song-slides' then
+  begin
+    AResponseInfo.ContentType := 'application/json';
+    AResponseInfo.CharSet := 'utf-8';
+
+    if (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
+    begin
+      AResponseInfo.ContentText := '{"status":"error","message":"Invalid token","code":"INVALID_TOKEN"}';
+      Exit;
+    end;
+
+    if (ARequestInfo.Params.Values['action'] = 'next') then
+    begin
+      if (fMusica.Visible) then
+      begin
+        fMusica.acaoSlide('prox');
+        AResponseInfo.ContentText := '{"status":"ok","message":"Advanced to the next slide"}';
+        Exit;
+      end
+      else
+      begin
+        AResponseInfo.ContentText := '{"status":"error","message":"No song playing","code":"NO_SONG_PLAYING"}';
+        Exit;
+      end;
+    end
+    else if (ARequestInfo.Params.Values['action'] = 'previous') then
+    begin
+      if (fMusica <> nil) and (fMusica.Visible) then
+      begin
+        fMusica.acaoSlide('ant');
+        AResponseInfo.ContentText :=
+          '{"status":"ok","message":"Reverted to the previous slide"}';
+        Exit;
+      end
+      else
+      begin
+        AResponseInfo.ContentText :=
+          '{"status":"error","message":"No song playing","code":"NO_SONG_PLAYING"}';
+        Exit;
+      end;
+    end
+    else if (ARequestInfo.Params.Values['action'] = 'playing-check') then
+    begin
+      if (fMusica <> nil) and (fMusica.Visible) then
+      begin
+        AResponseInfo.ContentText :=
+          '{"status":"ok","message":"Song playing","code":"SONG_PLAYING"}';
+        Exit;
+      end
+      else
+      begin
+        AResponseInfo.ContentText :=
+          '{"status":"error","message":"No song playing","code":"NO_SONG_PLAYING"}';
+        Exit;
+      end;
+    end
+    else if (ARequestInfo.Params.Values['action'] = 'close') then
+    begin
+      if (fMusica <> nil) and (fMusica.Visible) then
+      begin
+        fMusica.Close;
+        AResponseInfo.ContentText :=
+          '{"status":"ok","message":"Song closed","code":"SONG_CLOSED"}';
+        Exit;
+      end
+      else
+      begin
+        AResponseInfo.ContentText :=
+          '{"status":"error","message":"No song playing","code":"NO_SONG_PLAYING"}';
+        Exit;
+      end;
+    end
+    else
+    begin
+      AResponseInfo.ResponseNo := 400;
+      AResponseInfo.ContentText :=
+        '{"status":"error","message":"Missing or invalid action. Usage: /api/song-slides?action=next","code":"MISSING_ACTION"}';
+    end;
     Exit;
   end;
 
