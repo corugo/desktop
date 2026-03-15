@@ -289,6 +289,7 @@ var
   messageDraw: string;
   attemptCount: Integer;
   success: Boolean;
+  isLocalRequest: Boolean;
 begin
   // Allow cross-origin requests from web applications
   AResponseInfo.CustomHeaders.Values['Access-Control-Allow-Origin'] := '*';
@@ -296,13 +297,20 @@ begin
 
   arq := ARequestInfo.Document;
 
+  // Requests via localhost (127.0.0.1) are trusted â€” only processes on the
+  // same machine can reach this binding. Token is only required for network access.
+  // AContext.Binding.IP returns the server-side socket address (getsockname),
+  // which cannot be spoofed by a remote client.
+  isLocalRequest := (AContext.Binding.IP = '127.0.0.1');
+
   // API: Health check endpoint (used by web apps to detect if LouvorJA is running)
   if arq = '/api/ping' then
   begin
     AResponseInfo.ContentType := 'application/json';
     AResponseInfo.CharSet := 'utf-8';
 
-    if (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
+    if (not isLocalRequest) and
+       (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
     begin
       AResponseInfo.ContentText := '{"status":"error","message":"Invalid token","code":"INVALID_TOKEN"}';
       Exit;
@@ -453,7 +461,7 @@ begin
     else if (ARequestInfo.Params.Values['action'] = 'draw') then
     begin
       fmIndex.btSortearClick(fmIndex.btSortear);
-      AResponseInfo.ContentText := '{"status":"ok","action":"get-last","message":"Sorteando número"}';
+      AResponseInfo.ContentText := '{"status":"ok","action":"get-last","message":"Sorteando nï¿½mero"}';
       Exit;
     end;
     Exit;
@@ -514,7 +522,8 @@ begin
     AResponseInfo.ContentType := 'application/json';
     AResponseInfo.CharSet := 'utf-8';
 
-    if (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
+    if (not isLocalRequest) and
+       (ARequestInfo.Params.Values['token'] <> fmIndex.lerParam('Servidor', 'Token','')) then
     begin
       AResponseInfo.ContentText := '{"status":"error","message":"Invalid token","code":"INVALID_TOKEN"}';
       Exit;
