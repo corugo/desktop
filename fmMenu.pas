@@ -2226,6 +2226,11 @@ type
     procedure garanteUtf8Liturgia;
     function abreIniLiturgia: TMemIniFile;
 
+    function lerLiturgia(const grupo, param, padrao: string): string;
+
+  private
+    FIniLiturgia: TMemIniFile;
+
   public
     { Public declarations }
     dir_dados: string;
@@ -5956,8 +5961,8 @@ var
   slabel: TbsSkinStdLabel;
   pb: Boolean;
 begin
-  tipo := lerParam(item, 'tipo', '', arq_liturgia);
-  subtipo := lerParam(item, 'subtipo', '', arq_liturgia);
+  tipo := lerLiturgia(item, 'tipo', '');
+  subtipo := lerLiturgia(item, 'subtipo', '');
 
   panel := TPanel(FindComponent(item));
   if Assigned(Panel) then
@@ -5976,6 +5981,7 @@ begin
   begin
     panel := TPanel(CopyComponent(lit_modItem,sbLiturgia,item));
     panel.OnClick := lit_modItem.OnClick;
+    panel.DoubleBuffered := True;
 
     panel2 := TPanel(CopyComponent(lit_modItem_btmove,panel,item+'_btmove'));
     panel2.OnMouseDown := lit_modItem_btmove.OnMouseDown;
@@ -5996,7 +6002,7 @@ begin
   begin
     panel2 := TPanel(CopyComponent(lit_modItem_bticon,panel,item+'_bticon'));
     panel2.OnClick := lit_modItem_bticon.OnClick;
-    panel2.Color := StringToColor(lerParam(item, 'cor', '$004F0000', arq_liturgia));
+    panel2.Color := StringToColor(lerLiturgia(item, 'cor', '$004F0000'));
     image := TbsPngImageView(CopyComponent(lit_modItem_bticon_img,panel2,item+'_bticon_img'));
     image.OnClick := lit_modItem_bticon_img.OnClick;
     panel2 := TPanel(CopyComponent(lit_modItem_texto,panel,item+'_texto'));
@@ -6019,18 +6025,18 @@ begin
       DM.cdsItensAgendados.Open;
 
       DM.cdsItensAgendados.Filtered := false;
-      if (DM.cdsItensAgendados.Locate('CATEGORIA;DATA', VarArrayOf([lerParam(item, 'id', '', arq_liturgia),IncDay(now(),strtoint(loadCol.Strings.Values['LITURGIA:SEMANA']) - dayofweek(now()))]), []))
+      if (DM.cdsItensAgendados.Locate('CATEGORIA;DATA', VarArrayOf([lerLiturgia(item, 'id', ''),IncDay(now(),strtoint(loadCol.Strings.Values['LITURGIA:SEMANA']) - dayofweek(now()))]), []))
         then slabel.Caption := 'Arquivo '+DM.cdsItensAgendados.FieldByName('ARQUIVO').AsString
         else slabel.Caption := 'Não há arquivo agendado para esta data!';
     end
-    else slabel.Caption := lerParam(item, 'subitem', '', arq_liturgia);
+    else slabel.Caption := lerLiturgia(item, 'subitem', '');
     slabel := TbsSkinStdLabel(CopyComponent(lit_modItem_titulo,panel2,item+'_titulo'));
     slabel.OnClick := lit_modItem_titulo.OnClick;
-    slabel.Caption := lerParam(item, 'item', '', arq_liturgia);
+    slabel.Caption := lerLiturgia(item, 'item', '');
     slabel.Align := alTop;
     checkbox := TbsSkinCheckBox(CopyComponent(lit_modItem_checkb,panel,item+'_checkb'));
     checkbox.OnClick := lit_modItem_checkb.OnClick;
-    checkbox.Checked := (lerParam(item, 'checked', '', arq_liturgia) = FormatDateTime('dd/mm/yyyy',Now()));
+    checkbox.Checked := (lerLiturgia(item, 'checked', '') = FormatDateTime('dd/mm/yyyy',Now()));
     panel.AlignWithMargins := false;
     panel.Height := 56;
   end
@@ -6038,9 +6044,9 @@ begin
   begin
     panel2 := TPanel(CopyComponent(lit_modItem_bticon,panel,item+'_bticon'));
     panel2.OnClick := PanelColorClick;
-    panel2.Color := StringToColor(lerParam(item, 'cor', '$004F0000', arq_liturgia));
+    panel2.Color := StringToColor(lerLiturgia(item, 'cor', '$004F0000'));
     panel2.Align := alClient;
-//    panel.Color := StringToColor(lerParam(item, 'cor', '$004F0000', arq_liturgia));
+//    panel.Color := StringToColor(lerLiturgia(item, 'cor', '$004F0000'));
     panel.Height := 36;
     panel.AlignWithMargins := True;
     panel.Margins.Top := 20;
@@ -6054,7 +6060,7 @@ begin
     slabel.UseSkinColor := false;
     slabel.Font.Color := clWhite;
 //    slabel.OnClick := lit_modItem_titulo.OnClick;
-    slabel.Caption := lerParam(item, 'item', '', arq_liturgia);
+    slabel.Caption := lerLiturgia(item, 'item', '');
     slabel.Font.Color := clWhite;
     slabel.Align := alClient;
     slabel.Alignment := taCenter;
@@ -6074,12 +6080,12 @@ begin
       then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 45
     else TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 60;
 
-    if lerParam(item, 'musica', '0', arq_liturgia) = '-1'
+    if lerLiturgia(item, 'musica', '0') = '-1'
       then pb := true
     else
     begin
       DM.qrMUSICA.Close;
-      DM.qrMUSICA.ParamByName('ID').Value := StrToInt('0'+lerParam(item, 'musica', '0', arq_liturgia));
+      DM.qrMUSICA.ParamByName('ID').Value := StrToInt('0'+lerLiturgia(item, 'musica', '0'));
       DM.qrMUSICA.Open;
       if DM.qrMUSICA.RecordCount <= 0
         then pb := true
@@ -6115,7 +6121,7 @@ begin
   end
   else if (tipo = 'site') then
   begin
-    subtipo := lerParam(item, 'subitem', '', arq_liturgia);
+    subtipo := lerLiturgia(item, 'subitem', '');
     if  (Pos('.youtube.',subtipo) > 0)
      or (Pos('/youtube.',subtipo) > 0)
      or (Pos('.youtu.be.',subtipo) > 0)
@@ -6150,25 +6156,39 @@ var
   i: integer;
 begin
   garanteUtf8Liturgia;
-  itens := TStringList.Create;
-  itens.Delimiter := ';';
-  itens.DelimitedText := lerParam('Geral', IntToStr(semana), '', arq_liturgia);
 
-  lbLiturgia.Items.Clear;
-  lbLiturgia.Items := itens;
+  sbLiturgia.DoubleBuffered := True;
+  FIniLiturgia := abreIniLiturgia;
 
-  for i := pred(sbLiturgia.ControlCount) downto 0 do
-  begin
-    if sbLiturgia.Controls[i].Visible
-      then sbLiturgia.Controls[i].Destroy;
+  sbLiturgia.DisableAlign;
+  try
+    itens := TStringList.Create;
+    try
+      itens.Delimiter := ';';
+      itens.DelimitedText := lerLiturgia('Geral', IntToStr(semana), '');
+
+      lbLiturgia.Items.Clear;
+      lbLiturgia.Items := itens;
+    finally
+      itens.Free;
+    end;
+
+    for i := pred(sbLiturgia.ControlCount) downto 0 do
+    begin
+      if sbLiturgia.Controls[i].Visible
+        then sbLiturgia.Controls[i].Destroy;
+    end;
+
+    if (lbLiturgia.Items.Count > 0) and
+      (trim(lbLiturgia.Items[lbLiturgia.Items.Count-1]) = '')
+      then lbLiturgia.Items.Delete(lbLiturgia.Items.Count-1);
+
+    for i := 0 to lbLiturgia.Items.Count-1 do
+      carregaItemLiturgia(lbLiturgia.Items[i],i+1);
+  finally
+    sbLiturgia.EnableAlign;
+    FreeAndNil(FIniLiturgia);
   end;
-
-  if (lbLiturgia.Items.Count > 0) and
-    (trim(lbLiturgia.Items[lbLiturgia.Items.Count-1]) = '')
-    then lbLiturgia.Items.Delete(lbLiturgia.Items.Count-1);
-
-  for i := 0 to lbLiturgia.Items.Count-1 do
-    carregaItemLiturgia(lbLiturgia.Items[i],i+1);
 end;
 
 function TfmIndex.IsNumeric(S: string): boolean;
@@ -6546,6 +6566,14 @@ begin
   finally
     sl.Free;
   end;
+end;
+
+function TfmIndex.lerLiturgia(const grupo, param, padrao: string): string;
+begin
+  if Assigned(FIniLiturgia) then
+    Result := FIniLiturgia.ReadString(grupo, param, padrao)
+  else
+    Result := lerParam(grupo, param, padrao, arq_liturgia);
 end;
 
 function TfmIndex.abreIniLiturgia: TMemIniFile;
@@ -10279,8 +10307,7 @@ begin
   Panel.Color := move_panel.Color;
 
   move_panel.Free;
-  panel.DoubleBuffered := False;
-  sbLiturgia.DoubleBuffered := False;
+
 
   itens := TStringList.Create;
   for i := 0 to pred(sbLiturgia.ControlCount) do
