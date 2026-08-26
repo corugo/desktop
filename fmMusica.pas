@@ -983,8 +983,6 @@ begin
 end;
 
 procedure TfMusica.FormClose(Sender: TObject; var Action: TCloseAction);
-var
-  i: integer;
 begin
   if (fTransmitir.btServidor.ImageIndex <> 8) then
   begin
@@ -992,41 +990,15 @@ begin
      fmIndex.gravaParamServer('MUSICA', 'letra_prox', '');
   end;
 
-  {
-    Stinger de saida: cobre a tela, esconde a janela por tras da cobertura e
-    revela o que estava embaixo. O usuario nunca ve o instante em que a musica
-    desaparece.
-  }
-  if stinger_ativo and (fMusica.AlphaBlendValue > 0) then
-  begin
-    fIniciando.AppCreateForm(TfStinger, fStinger);
-    fStinger.Abre(fMusica.Left, fMusica.Top, fMusica.Width, fMusica.Height);
-
-    fStinger.Roda(1, STINGER_COBERTO - 1);
-
-    //Com a tela coberta, o som para junto: sem isto a musica seguia tocando
-    //durante a revelacao, ja sem nada aparecendo
-    if (audio) then
-      BASS_ChannelPause(bass_channel);
-    tmrTempo.Enabled := False;
-
-    fMusica.AlphaBlendValue := 0;
-    fStinger.Roda(STINGER_COBERTO, STINGER_QUADROS);
-
-    fStinger.Close;
-  end
-  else if (fMusica.AlphaBlendValue > 0) then
-  begin
-    if fmIndex.ckFadeForm.Checked then
+  //Ao cobrir a tela, o som para junto: sem isto a musica seguiria tocando
+  //durante a revelacao, ja sem nada aparecendo
+  fmIndex.fadeJanela(fMusica, 0,
+    procedure
     begin
-      for i := fMusica.AlphaBlendValue downto 0 do
-      begin
-        fMusica.AlphaBlendValue := i;
-        sleep(1);
-      end;
-    end
-    else fMusica.AlphaBlendValue := 0;
-  end;
+      if (audio) then
+        BASS_ChannelPause(bass_channel);
+      tmrTempo.Enabled := False;
+    end);
 
   if (audio) then
   begin

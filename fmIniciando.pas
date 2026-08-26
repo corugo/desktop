@@ -247,6 +247,10 @@ begin
   //**CARREGA CONFIGURAÇÕES GLOBAIS*********************************************
   fmIndex.ckMonitorJanela.Checked := (fmIndex.lerParam('Config', 'MonitorTelaCheia', '1') = '1');
   fmIndex.ckFadeForm.Checked := (fmIndex.lerParam('Config', 'FadeForm', '1') = '1');
+  fmIndex.ckStinger.Checked := (fmIndex.lerParam('Config', 'Stinger', '0') = '1');
+  //As duas nao coexistem: se o arquivo trouxer ambas marcadas, a transicao manda
+  if fmIndex.ckStinger.Checked then
+    fmIndex.ckFadeForm.Checked := False;
   fmIndex.ckMesmaJanela.Checked := false;// (fmIndex.lerParam('Config', 'ckMesmaJanela', '0') = '1');
   fmIndex.ckMusicaJanela.Checked := (fmIndex.lerParam('Musicas', 'MonitorTelaCheia', '1') = '1');
   fmIndex.ckMusicaTopo.Checked := (fmIndex.lerParam('Musicas', 'Topo', '1') = '1');
@@ -395,15 +399,7 @@ begin
 
     //**MOSTRA FORM*************************************************************
     fmIndex.Show;
-    if fmIndex.ckFadeForm.Checked then
-    begin
-      for i := 0 to 255 do
-      begin
-        fmIndex.AlphaBlendValue := i;
-        sleep(1);
-      end;
-    end
-    else fmIndex.AlphaBlendValue := 255;
+    fmIndex.fadeJanela(fmIndex, 255);
 
     //**CHECA VERSÃO E NOVAS VERSÕES********************************************
     fmIndex.gravaParam('Config','VersaoExe',fmIndex.VersaoExe);

@@ -545,10 +545,18 @@ begin
   tmrCriaBrowser.Enabled := False;
   url_pendente := '';
 
-  //Interrompe o vídeo: a janela só é escondida, então sem isso o áudio
-  //continuaria tocando depois de fechada
-  if (wvVideo <> nil) and wvVideo.Initialized then
-    wvVideo.Navigate('about:blank');
+  //Interrompe o vídeo no instante em que a tela é coberta, para o som sumir
+  //junto com a imagem. A pausa é imediata; o about:blank vem em seguida porque
+  //a janela só é escondida, e sem ele o áudio voltaria com ela
+  fmIndex.fadeJanela(fVideoOn, 0,
+    procedure
+    begin
+      if (wvVideo <> nil) and wvVideo.Initialized then
+      begin
+        pausa;
+        wvVideo.Navigate('about:blank');
+      end;
+    end);
 end;
 
 procedure TfVideoOn.FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);

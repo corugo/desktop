@@ -34987,6 +34987,80 @@ object fmIndex: TfmIndex
                   Align = alClient
                 end
               end
+              object bsSkinPanelStinger: TbsSkinPanel
+                Left = 0
+                Top = -422
+                Width = 873
+                Height = 24
+                HintImageIndex = 0
+                TabOrder = 12
+                SkinData = DM.bsSkinData1
+                SkinDataName = 'panel'
+                DefaultFont.Charset = DEFAULT_CHARSET
+                DefaultFont.Color = clWindowText
+                DefaultFont.Height = 13
+                DefaultFont.Name = 'Tahoma'
+                DefaultFont.Style = []
+                DefaultWidth = 0
+                DefaultHeight = 0
+                UseSkinFont = True
+                EmptyDrawing = False
+                RibbonStyle = False
+                ImagePosition = bsipDefault
+                TransparentMode = False
+                CaptionImageIndex = 0
+                RealHeight = -1
+                AutoEnabledControls = True
+                CheckedMode = False
+                Checked = False
+                DefaultAlignment = taLeftJustify
+                DefaultCaptionHeight = 20
+                BorderStyle = bvNone
+                CaptionMode = False
+                RollUpMode = False
+                RollUpState = False
+                NumGlyphs = 1
+                Spacing = 2
+                Caption = 'bsSkinPanelStinger'
+                Align = alTop
+                object ckStinger: TbsSkinCheckBox
+                  AlignWithMargins = True
+                  Left = 36
+                  Top = 0
+                  Width = 837
+                  Height = 24
+                  Margins.Left = 36
+                  Margins.Top = 0
+                  Margins.Right = 0
+                  Margins.Bottom = 0
+                  HintImageIndex = 0
+                  TabOrder = 0
+                  SkinData = DM.bsSkinData1
+                  SkinDataName = 'checkbox'
+                  DefaultFont.Charset = DEFAULT_CHARSET
+                  DefaultFont.Color = clWindowText
+                  DefaultFont.Height = 13
+                  DefaultFont.Name = 'Tahoma'
+                  DefaultFont.Style = []
+                  DefaultWidth = 0
+                  DefaultHeight = 0
+                  UseSkinFont = True
+                  WordWrap = True
+                  AllowGrayed = False
+                  State = cbUnchecked
+                  ImageIndex = 0
+                  Flat = True
+                  UseSkinFontColor = True
+                  TabStop = True
+                  CanFocused = True
+                  Radio = False
+                  Checked = False
+                  GroupIndex = 0
+                  Caption = 'Usar transi'#231#227'o animada entre as telas (substitui o esmaecimento)'
+                  OnClick = ckStingerClick
+                  Align = alClient
+                end
+              end
               object bsSkinPanel94: TbsSkinPanel
                 Left = 0
                 Top = -422

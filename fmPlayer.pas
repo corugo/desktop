@@ -37,21 +37,19 @@ begin
 end;
 
 procedure TfPlayer.FormClose(Sender: TObject; var Action: TCloseAction);
-var
-  i: integer;
 begin
-  if (fPlayer.AlphaBlendValue > 0) then
-  begin
-    if fmIndex.ckFadeForm.Checked then
+  //Pausa no instante em que a tela e coberta: sem isto o video seguiria
+  //tocando durante a transicao, ja sem nada aparecendo. A parada completa
+  //vem logo abaixo, depois da janela ter sumido
+  fmIndex.fadeJanela(fPlayer, 0,
+    procedure
     begin
-      for i := fPlayer.AlphaBlendValue downto 0 do
-      begin
-        fPlayer.AlphaBlendValue := i;
-        sleep(1);
+      try
+        fmIndex.MediaPlayer1.Pause;
+      except
+        //
       end;
-    end
-    else fPlayer.AlphaBlendValue := 0;
-  end;
+    end);
 
   try
     fmIndex.MediaPlayer1.Stop;

@@ -1195,6 +1195,8 @@ type
     btPersoClipBoard: TbsSkinSpeedButton;
     bsSkinPanel51: TbsSkinPanel;
     ckFadeForm: TbsSkinCheckBox;
+    ckStinger: TbsSkinCheckBox;
+    bsSkinPanelStinger: TbsSkinPanel;
     btLitClipBoard: TbsSkinSpeedButton;
     cbBloqItens: TbsSkinCheckBox;
     bsSkinPanel94: TbsSkinPanel;
@@ -1685,6 +1687,13 @@ type
     function lerParam(Grupo, Param, Valor: string;Arquivo: string = ''; Diretorio:string = ''): string;
     procedure gravaParam(Grupo, Param, Valor: string;Arquivo: string = '');
     procedure gravaParamLote(const Arquivo: string; const Itens: array of TParamItem);
+    //Fecha a janela sem rodar o stinger de saida: para quando ela esta sendo
+    //substituida por outra, que trara a sua propria transicao
+    procedure fechaSemStinger(Janela: TForm);
+
+    //Faz a janela aparecer ou sumir em tempo fixo, respeitando o ckFadeForm
+    procedure fadeJanela(Janela: TForm; alvo: Integer; AoCobrir: TProc = nil);
+
     procedure gravaParamServer(Grupo, Param, Valor: string);
     procedure apagaParam(Grupo: string; Param: string = '';Arquivo: string = '');
     procedure cbMusicaChange(Sender: TObject);
@@ -2089,6 +2098,7 @@ type
     procedure getClipboard();
     procedure btPersoClipBoardClick(Sender: TObject);
     procedure ckFadeFormClick(Sender: TObject);
+    procedure ckStingerClick(Sender: TObject);
     function RecursiveDelete(FullPath: String;nivel: integer = 0): Boolean;
     procedure btLitClipBoardClick(Sender: TObject);
     procedure cbBloqItensClick(Sender: TObject);
@@ -2266,8 +2276,13 @@ type
 var
   fmIndex: TfmIndex;
 
-  //Liga a transicao animada na abertura das janelas
-  stinger_ativo: Boolean = True;
+  //Maior que zero suspende o stinger: e como as trocas de janela evitam rodar
+  //a transicao de saida logo antes da de entrada
+  stinger_suspenso: Integer = 0;
+
+  //Duração do fade das janelas, em milissegundos. É tempo de relógio: a
+  //animação termina neste prazo em qualquer computador
+  fade_ms: Integer = 250;
 
 implementation
 
@@ -3233,7 +3248,6 @@ end;
 procedure TfmIndex.abreLetraMusica(tipo: string;param: string;musicaID: Integer;audio:boolean);
 var
   monitor,monitor_ret,monitor_ope: integer;
-  i: Integer;
 begin
   monitor := strtoint(lerParam('Musicas', 'Monitor', '2'));
   monitor_ret := strtoint(lerParam('Musicas', 'MonitorRetorno', '3'));
@@ -3254,14 +3268,10 @@ begin
   else
     monitor_ope := monitor_ope - 1;
 
-  if fMusica <> nil then
-    fMusica.Close;
-
-  if fMusicaOperador <> nil then
-    fMusicaOperador.Close;
-
-  if fMusicaRetorno <> nil then
-    fMusicaRetorno.Close;
+  //A musica anterior sai sem transicao: quem entra traz a sua
+  fechaSemStinger(fMusica);
+  fechaSemStinger(fMusicaOperador);
+  fechaSemStinger(fMusicaRetorno);
 
   fIniciando.AppCreateForm(TfMusicaOperador, fMusicaOperador);
   fIniciando.AppCreateForm(TfMusicaRetorno, fMusicaRetorno);
@@ -3343,43 +3353,12 @@ begin
   end;
 
 
-  {
-    A janela ja esta montada e ainda invisivel: e a hora de rodar o stinger.
-
-    Rodar antes do carregamento fazia a animacao travar no meio, porque montar
-    a musica bloqueia a interface por alguns segundos. Carregando primeiro, a
-    animacao corre inteira sem interrupcao.
-
-    Do quadro 35 em diante a tela fica 100% coberta, entao e ali que o fMusica
-    aparece atras, sem o usuario ver o instante da troca.
-  }
-  if stinger_ativo then
-  begin
-    fIniciando.AppCreateForm(TfStinger, fStinger);
-    fStinger.Abre(monitorInfo(monitor).Left, monitorInfo(monitor).Top,
-                  monitorInfo(monitor).Width, monitorInfo(monitor).Height);
-
-    fStinger.Roda(1, STINGER_COBERTO - 1);
-    fMusica.AlphaBlendValue := 255;
-    fStinger.Roda(STINGER_COBERTO, STINGER_QUADROS);
-
-    fStinger.Close;
-  end
-  else if ckFadeForm.Checked then
-  begin
-    for i := 0 to 255 do
-    begin
-      fMusica.AlphaBlendValue := i;
-      sleep(1);
-    end;
-  end
-  else fMusica.AlphaBlendValue := 255;
+  fadeJanela(fMusica, 255);
 end;
 
 procedure TfmIndex.abreLetraMusicaAlbum(albumID: Integer;musicaID: Integer);
 var
   monitor, monitor_ret: integer;
-  i: integer;
 begin
   monitor := strtoint(lerParam('Musicas', 'Monitor', '2'));
   if (Screen.MonitorCount < monitor) then
@@ -3393,15 +3372,11 @@ begin
   else
     monitor_ret := monitor_ret - 1;
 
-  if fMusica <> nil then
-    fMusica.Close;
+  //A musica anterior sai sem transicao: quem entra traz a sua
+  fechaSemStinger(fMusica);
+  fechaSemStinger(fMusicaOperador);
 
-
-  if fMusicaOperador <> nil then
-    fMusicaOperador.Close;
-
-  if fMusicaRetorno <> nil then
-    fMusicaRetorno.Close;
+  fechaSemStinger(fMusicaRetorno);
 
   fIniciando.AppCreateForm(TfMusicaOperador, fMusicaOperador);
 
@@ -3481,15 +3456,7 @@ begin
   end;
 
 
-  if ckFadeForm.Checked then
-  begin
-    for i := 0 to 255 do
-    begin
-      fMusica.AlphaBlendValue := i;
-      sleep(1);
-    end;
-  end
-  else fMusica.AlphaBlendValue := 255;
+  fadeJanela(fMusica, 255);
 end;
 
 procedure TfmIndex.abrePagina(TabSheet: TbsSkinTabSheet);
@@ -3524,7 +3491,6 @@ procedure TfmIndex.abreVideoOn(videoID, videoTITULO: string);
 var
   monitor: integer;
   Flags: Cardinal;
-  i: integer;
 begin
   if not InternetGetConnectedState(@Flags, 0) then
   begin
@@ -3550,7 +3516,7 @@ begin
   if fVideoOn = nil then
     fIniciando.AppCreateForm(TfVideoOn, fVideoOn)
   else
-    fVideoOn.Close;
+    fechaSemStinger(fVideoOn);
 
   fVideoOn.videoID := videoID;
   fVideoOn.Caption := videoTITULO;
@@ -3570,15 +3536,7 @@ begin
   fVideoOn.Height := monitorInfo(monitor).Height;
 
 
-  if ckFadeForm.Checked then
-  begin
-    for i := 0 to 255 do
-    begin
-      fVideoOn.AlphaBlendValue := i;
-      sleep(1);
-    end;
-  end
-  else fVideoOn.AlphaBlendValue := 255;
+  fadeJanela(fVideoOn, 255);
 
   //O mesmo painel usado no player de arquivos passa a controlar o vídeo
   //online. A barra só ganha escala quando o YouTube informar a duração.
@@ -6889,6 +6847,118 @@ begin
   gravaParamLote(Arquivo, [item]);
 end;
 
+procedure TfmIndex.fechaSemStinger(Janela: TForm);
+begin
+  if (Janela = nil) then
+    Exit;
+
+  Inc(stinger_suspenso);
+  try
+    Janela.Close;
+  finally
+    Dec(stinger_suspenso);
+  end;
+end;
+
+{
+  Faz a janela aparecer ou sumir suavemente, num prazo fixo.
+
+  O laço anterior dava 256 passos com sleep entre eles, então quem definia a
+  duração era a velocidade da máquina - num PC lento a animação se arrastava,
+  num rápido passava batido. Aqui a duração é a referência e o alfa sai do
+  tempo já decorrido: máquina lenta desenha menos quadros, mas termina no
+  mesmo instante.
+
+  O sleep continua para não ocupar a CPU à toa, e agora influencia apenas
+  quantos quadros são desenhados, nunca o prazo total.
+}
+procedure TfmIndex.fadeJanela(Janela: TForm; alvo: Integer; AoCobrir: TProc);
+var
+  freq, t0, agora: Int64;
+  inicio, decorrido: Double;
+  valor: Integer;
+begin
+  if (Janela = nil) then
+    Exit;
+
+  if (alvo < 0) then
+    alvo := 0
+  else if (alvo > 255) then
+    alvo := 255;
+
+  //Nada a transicionar se a janela ja esta como deveria ficar. Vale sobretudo
+  //no fechamento: as telas de musica e de operador se fecham uma a outra, e o
+  //FormClose da musica chega a rodar duas vezes
+  if (Janela.AlphaBlendValue = alvo) then
+  begin
+    if Assigned(AoCobrir) then
+      AoCobrir();
+    Exit;
+  end;
+
+
+  {
+    Com o stinger ligado, a transição é ele: cobre a tela, troca a janela por
+    trás da cobertura e revela. Vale tanto para aparecer quanto para sumir - o
+    'alvo' já diz qual dos dois é.
+
+    AoCobrir avisa quem chamou no instante em que a tela está coberta; é onde
+    dá para fazer o que não deve ser visto, como parar o áudio da música. Ele
+    é sempre chamado uma vez, mesmo sem stinger ou sem nada a animar.
+  }
+  {
+    Nem toda janela leva stinger. Ficam de fora a janela principal do programa,
+    que nao e tela de projecao, e as telas de operador e retorno, que
+    acompanham a musica em vez de terem transicao propria.
+  }
+  if ckStinger.Checked and (stinger_suspenso = 0) and (Janela <> Self)
+     and (Janela <> fMusicaOperador) and (Janela <> fMusicaRetorno) then
+  begin
+    fIniciando.AppCreateForm(TfStinger, fStinger);
+    fStinger.Abre(Janela.Left, Janela.Top, Janela.Width, Janela.Height);
+
+    fStinger.Roda(1, STINGER_COBERTO - 1);
+
+    if Assigned(AoCobrir) then
+      AoCobrir();
+    Janela.AlphaBlendValue := alvo;
+
+    fStinger.Roda(STINGER_COBERTO, STINGER_QUADROS);
+    fStinger.Close;
+    Exit;
+  end;
+  //Sem stinger nao ha instante coberto: avisa antes de comecar a sumir
+  if Assigned(AoCobrir) then
+    AoCobrir();
+
+  QueryPerformanceFrequency(freq);
+
+  //Fade desligado, ou sem relógio de precisão: vai direto ao valor final
+  if (not ckFadeForm.Checked) or (freq = 0) or (fade_ms <= 0) then
+  begin
+    Janela.AlphaBlendValue := alvo;
+    Exit;
+  end;
+
+  inicio := Janela.AlphaBlendValue;
+
+  QueryPerformanceCounter(t0);
+  repeat
+    QueryPerformanceCounter(agora);
+    decorrido := (agora - t0) * 1000 / freq;
+
+    if (decorrido >= fade_ms) then
+      valor := alvo
+    else
+      valor := Trunc(inicio + (alvo - inicio) * (decorrido / fade_ms));
+
+    Janela.AlphaBlendValue := valor;
+
+    if (valor <> alvo) then
+      Sleep(1);
+  until (valor = alvo);
+end;
+
 procedure TfmIndex.gravaParamServer(Grupo, Param, Valor: string);
 var
   ArqIni: TIniFile;
@@ -8706,10 +8776,9 @@ end;
 
 procedure TfmIndex.player(url: string;video: Boolean);
 var
-  monitor,i: integer;
+  monitor: integer;
 begin
-  if (fPlayer <> nil) then
-    fPlayer.Close;
+  fechaSemStinger(fPlayer);
 
   if (video) then
   begin
@@ -8734,15 +8803,7 @@ begin
     fPlayer.Width := monitorInfo(monitor).Width;
     fPlayer.Height := monitorInfo(monitor).Height;
 
-    if ckFadeForm.Checked then
-    begin
-      for i := 0 to 255 do
-      begin
-        fPlayer.AlphaBlendValue := i;
-        sleep(1);
-      end;
-    end
-    else fPlayer.AlphaBlendValue := 255;
+    fadeJanela(fPlayer, 255);
     fPlayer.Caption := ExtractFileName(url);
   end;
 
@@ -13629,7 +13690,6 @@ procedure TfmIndex.expandirArea(Sender: TObject);
 var
   abre: Boolean;
   monitor: Integer;
-  i: integer;
   item_config: string;
   botao: string;
 begin
@@ -13682,15 +13742,7 @@ begin
 
       copiaDadosTelaExtendida();
 
-      if ckFadeForm.Checked then
-      begin
-        for i := 0 to 255 do
-        begin
-          fMonitorMenuMusicas.AlphaBlendValue := i;
-          sleep(1);
-        end;
-      end
-      else fMonitorMenuMusicas.AlphaBlendValue := 255;
+      fadeJanela(fMonitorMenuMusicas, 255);
     end
     else
     if (botao = 'btExp_Biblia') then
@@ -13716,15 +13768,7 @@ begin
 
       copiaDadosTelaExtendida();
 
-      if ckFadeForm.Checked then
-      begin
-        for i := 0 to 255 do
-        begin
-          fMonitorBiblia.AlphaBlendValue := i;
-          sleep(1);
-        end;
-      end
-      else fMonitorBiblia.AlphaBlendValue := 255;
+      fadeJanela(fMonitorBiblia, 255);
     end
     else
     if (botao = 'btExp_BibliaBusca') then
@@ -13750,15 +13794,7 @@ begin
 
       copiaDadosTelaExtendida();
 
-      if ckFadeForm.Checked then
-      begin
-        for i := 0 to 255 do
-        begin
-          fMonitorBibliaBusca.AlphaBlendValue := i;
-          sleep(1);
-        end;
-      end
-      else fMonitorBibliaBusca.AlphaBlendValue := 255;
+      fadeJanela(fMonitorBibliaBusca, 255);
     end
     else
     if (botao = 'btExp_EscolaSabatina') then
@@ -13784,15 +13820,7 @@ begin
 
       copiaDadosTelaExtendida();
 
-      if ckFadeForm.Checked then
-      begin
-        for i := 0 to 255 do
-        begin
-          fMonitorCronometroCulto.AlphaBlendValue := i;
-          sleep(1);
-        end;
-      end
-      else fMonitorCronometroCulto.AlphaBlendValue := 255;
+      fadeJanela(fMonitorCronometroCulto, 255);
     end
     else
     if (botao = 'btExp_Sorteio') then
@@ -13818,15 +13846,7 @@ begin
 
       copiaDadosTelaExtendida();
 
-      if ckFadeForm.Checked then
-      begin
-        for i := 0 to 255 do
-        begin
-          fMonitorSorteio.AlphaBlendValue := i;
-          sleep(1);
-        end;
-      end
-      else fMonitorSorteio.AlphaBlendValue := 255;
+      fadeJanela(fMonitorSorteio, 255);
     end
     else
     if (botao = 'btExp_Cronometro') then
@@ -13852,15 +13872,7 @@ begin
 
       copiaDadosTelaExtendida();
 
-      if ckFadeForm.Checked then
-      begin
-        for i := 0 to 255 do
-        begin
-          fMonitorCronometro.AlphaBlendValue := i;
-          sleep(1);
-        end;
-      end
-      else fMonitorCronometro.AlphaBlendValue := 255;
+      fadeJanela(fMonitorCronometro, 255);
     end
     else
     if (botao = 'btExp_PainelD') then
@@ -13886,15 +13898,7 @@ begin
 
       copiaDadosTelaExtendida();
 
-      if ckFadeForm.Checked then
-      begin
-        for i := 0 to 255 do
-        begin
-          fMonitorPainelDinamico.AlphaBlendValue := i;
-          sleep(1);
-        end;
-      end
-      else fMonitorPainelDinamico.AlphaBlendValue := 255;
+      fadeJanela(fMonitorPainelDinamico, 255);
     end
     else
     if (botao = 'btExp_TextoInterativo') then
@@ -13918,15 +13922,7 @@ begin
 
       copiaDadosTelaExtendida();
 
-      if ckFadeForm.Checked then
-      begin
-        for i := 0 to 255 do
-        begin
-          fMonitorTextoInterativo.AlphaBlendValue := i;
-          sleep(1);
-        end;
-      end
-      else fMonitorTextoInterativo.AlphaBlendValue := 255;
+      fadeJanela(fMonitorTextoInterativo, 255);
     end
     else if (botao = 'btExp_Relogio') then
     begin
@@ -13951,15 +13947,7 @@ begin
 
       copiaDadosTelaExtendida();
 
-      if ckFadeForm.Checked then
-      begin
-        for i := 0 to 255 do
-        begin
-          fMonitorRelogio.AlphaBlendValue := i;
-          sleep(1);
-        end;
-      end
-      else fMonitorRelogio.AlphaBlendValue := 255;
+      fadeJanela(fMonitorRelogio, 255);
     end;
 
   end
@@ -16024,12 +16012,38 @@ begin
 
 end;
 
+{
+  Esmaecimento e transição animada são formas alternativas de trocar de tela:
+  marcar uma desmarca a outra.
+}
 procedure TfmIndex.ckFadeFormClick(Sender: TObject);
 begin
   if ckFadeForm.Checked then
-    gravaParam('Config', 'FadeForm', '1')
+  begin
+    gravaParam('Config', 'FadeForm', '1');
+    if ckStinger.Checked then
+    begin
+      ckStinger.Checked := False;
+      gravaParam('Config', 'Stinger', '0');
+    end;
+  end
   else
     gravaParam('Config', 'FadeForm', '0');
+end;
+
+procedure TfmIndex.ckStingerClick(Sender: TObject);
+begin
+  if ckStinger.Checked then
+  begin
+    gravaParam('Config', 'Stinger', '1');
+    if ckFadeForm.Checked then
+    begin
+      ckFadeForm.Checked := False;
+      gravaParam('Config', 'FadeForm', '0');
+    end;
+  end
+  else
+    gravaParam('Config', 'Stinger', '0');
 end;
 
 procedure TfmIndex.ckFundoTransparenteClick(Sender: TObject);
