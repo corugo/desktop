@@ -107,7 +107,7 @@ implementation
 {$R *.dfm}
 
 uses fmMenu, fmMusicaOperador, fmAtualiza, dmComponentes, fmIniciando,
-  fmTransmitir, fmMusicaRetorno;
+  fmTransmitir, fmMusicaRetorno, fmStinger;
 
 { TfMusica }
 
@@ -992,7 +992,30 @@ begin
      fmIndex.gravaParamServer('MUSICA', 'letra_prox', '');
   end;
 
-  if (fMusica.AlphaBlendValue > 0) then
+  {
+    Stinger de saida: cobre a tela, esconde a janela por tras da cobertura e
+    revela o que estava embaixo. O usuario nunca ve o instante em que a musica
+    desaparece.
+  }
+  if stinger_ativo and (fMusica.AlphaBlendValue > 0) then
+  begin
+    fIniciando.AppCreateForm(TfStinger, fStinger);
+    fStinger.Abre(fMusica.Left, fMusica.Top, fMusica.Width, fMusica.Height);
+
+    fStinger.Roda(1, STINGER_COBERTO - 1);
+
+    //Com a tela coberta, o som para junto: sem isto a musica seguia tocando
+    //durante a revelacao, ja sem nada aparecendo
+    if (audio) then
+      BASS_ChannelPause(bass_channel);
+    tmrTempo.Enabled := False;
+
+    fMusica.AlphaBlendValue := 0;
+    fStinger.Roda(STINGER_COBERTO, STINGER_QUADROS);
+
+    fStinger.Close;
+  end
+  else if (fMusica.AlphaBlendValue > 0) then
   begin
     if fmIndex.ckFadeForm.Checked then
     begin

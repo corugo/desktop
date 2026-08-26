@@ -2266,10 +2266,13 @@ type
 var
   fmIndex: TfmIndex;
 
+  //Liga a transicao animada na abertura das janelas
+  stinger_ativo: Boolean = True;
+
 implementation
 
 uses
-  fmLetra, fmAtualiza, StrUtils, Math, fmNovaVersao,
+  fmLetra, fmAtualiza, StrUtils, Math, fmNovaVersao, fmStinger,
   fmHelp, fmVideoOn, fmFavoritos, fmMusica, fmListaMusica,
   fmMusicaOperador, fmLiturgia, fmArquivosFalta, fmBuscaMusica, fmArquivosExcesso,
   fmItensAgendados, dmComponentes, fmEditorSlides, fmPlayer, fmIniciando,
@@ -3340,7 +3343,29 @@ begin
   end;
 
 
-  if ckFadeForm.Checked then
+  {
+    A janela ja esta montada e ainda invisivel: e a hora de rodar o stinger.
+
+    Rodar antes do carregamento fazia a animacao travar no meio, porque montar
+    a musica bloqueia a interface por alguns segundos. Carregando primeiro, a
+    animacao corre inteira sem interrupcao.
+
+    Do quadro 35 em diante a tela fica 100% coberta, entao e ali que o fMusica
+    aparece atras, sem o usuario ver o instante da troca.
+  }
+  if stinger_ativo then
+  begin
+    fIniciando.AppCreateForm(TfStinger, fStinger);
+    fStinger.Abre(monitorInfo(monitor).Left, monitorInfo(monitor).Top,
+                  monitorInfo(monitor).Width, monitorInfo(monitor).Height);
+
+    fStinger.Roda(1, STINGER_COBERTO - 1);
+    fMusica.AlphaBlendValue := 255;
+    fStinger.Roda(STINGER_COBERTO, STINGER_QUADROS);
+
+    fStinger.Close;
+  end
+  else if ckFadeForm.Checked then
   begin
     for i := 0 to 255 do
     begin

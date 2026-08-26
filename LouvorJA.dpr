@@ -26,6 +26,7 @@ uses
   fmFormatacao in 'fmFormatacao.pas' {fFormatacao},
   fmEditorSlides in 'fmEditorSlides.pas' {fEditorSlides},
   fmIniciando in 'fmIniciando.pas' {fIniciando},
+  fmStinger in 'fmStinger.pas' {fStinger},
   fmPlayer in 'fmPlayer.pas' {fPlayer},
   fmTransmitir in 'fmTransmitir.pas' {fTransmitir},
   fmMusicaRetorno in 'fmMusicaRetorno.pas' {fMusicaRetorno},
