@@ -16,6 +16,7 @@ uses
   FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
   FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
   System.RegularExpressions, System.NetEncoding, System.IOUtils,
+  uSlides,
   BusinessSkinForm, bsSkinMenus, bsSkinCtrls, bsSkinTabs, bsButtonGroup,
   bsSkinBoxCtrls, bsSkinExCtrls, bsribbon, bsdbctrls, bsSkinShellCtrls,
   bsSkinGrids, bsDBGrids, bsColorCtrls, bsPngImageList;
@@ -2203,6 +2204,21 @@ type
     procedure bsSkinButton46Click(Sender: TObject);
     function monitorInfo(index: integer): TMonitorInfo;
     procedure importColetaneasPerso();
+    procedure sincronizaMusicasPerso();
+    procedure preparaTabelaMusicasPerso();
+    procedure sincronizaPastaPerso(const dir, idAlbum, nomeAlbum: string;
+      existentes, usados: TStringList);
+    procedure gravaMusicaPerso(const arq, arqPB, idAlbum, nomeAlbum: string;
+      existentes, usados: TStringList);
+    procedure insereMusicaPerso(const idAlbum, nomeAlbum, nome, url,
+      urlPB, letra, dt: string);
+    procedure execPerso(const sql: string);
+    function leSlidesArquivo(const arq: string;
+      out titulo, letra: string): Boolean;
+    function dataArquivoPerso(const arq: string): string;
+    function extensaoPerso(const arq: string): Boolean;
+    function ehArquivoSlides(const arq: string): Boolean;
+    function semAcentoSQL(const col: string): string;
     procedure ckgColetaneasClick(Sender: TObject);
     function arquivoCodificado(arq: string): TStringList;
     procedure bsknbtn1Click(Sender: TObject);
@@ -4643,8 +4659,10 @@ begin
 
   btMusicaSlideMusicaPB.Enabled := (DM.qrBUSCA.fieldbyname('URL_INSTRUMENTAL').AsString <> '');
   btMusicaAudioMusicaPB.Enabled := (DM.qrBUSCA.fieldbyname('URL_INSTRUMENTAL').AsString <> '');
-  btMusicaSlideMusicaSA.Enabled := not(DM.qrBUSCA.fieldbyname('TIPO_WEB').AsString = 'S') and not(DM.qrBUSCA.fieldbyname('TIPO_PERSO').AsString = 'S');
-  btMusicaAudioMusica.Enabled := not(DM.qrBUSCA.fieldbyname('TIPO_WEB').AsString = 'S') and not(DM.qrBUSCA.fieldbyname('TIPO_PERSO').AsString = 'S');
+  btMusicaSlideMusicaSA.Enabled := not(DM.qrBUSCA.fieldbyname('TIPO_WEB').AsString = 'S') and
+    (not(DM.qrBUSCA.fieldbyname('TIPO_PERSO').AsString = 'S') or ehArquivoSlides(DM.qrBUSCA.fieldbyname('URL').AsString));
+  btMusicaAudioMusica.Enabled := not(DM.qrBUSCA.fieldbyname('TIPO_WEB').AsString = 'S') and
+    (not(DM.qrBUSCA.fieldbyname('TIPO_PERSO').AsString = 'S') or ehArquivoSlides(DM.qrBUSCA.fieldbyname('URL').AsString));
   btMusicaLetra.Enabled := not(DM.qrBUSCA.fieldbyname('TIPO_WEB').AsString = 'S') and not(DM.qrBUSCA.fieldbyname('TIPO_PERSO').AsString = 'S');
 end;
 
@@ -7926,7 +7944,7 @@ end;
 
 procedure TfmIndex.btMusicaSlideMusicaClick(Sender: TObject);
 var
-  txt: string;
+  txt, url, urlPB: string;
 begin
   if (TComponent(Sender).Tag = 2)
     then txt := 'PB'
@@ -7952,10 +7970,16 @@ begin
   end
   else if (DM.qrBUSCA.fieldbyname('TIPO_PERSO').AsString = 'S') then
   begin
-    if (TComponent(Sender).Tag) = 2
-      then application.MessageBox('Não é possível abrir side playback de coletâneas personalizadas!', TITULO, mb_ok + MB_ICONEXCLAMATION)
-    else if (TComponent(Sender).Tag) = 3
-      then application.MessageBox('Não é possível abrir slide sem música de coletâneas personalizadas!', TITULO, mb_ok + MB_ICONEXCLAMATION)
+    url := DM.qrBUSCA.fieldbyname('URL').AsString;
+    urlPB := DM.qrBUSCA.fieldbyname('URL_INSTRUMENTAL').AsString;
+
+    //Pacote de slides: o abreSlidesArquivo trata os cinco modos, e os
+    //tags dos botoes de slides (1, 2 e 3) sao os mesmos dele
+    if FileExists(url) and ehArquivoSlides(url) then
+      abreSlidesArquivo(url, urlPB, TComponent(Sender).Tag)
+    else if FileExists(url) and ((TComponent(Sender).Tag) = 2)
+      and (urlPB <> '') then
+      abrirArquivo(urlPB)
     else
     begin
       if FileExists(DM.qrBUSCA.fieldbyname('URL').AsString) then
@@ -12527,6 +12551,11 @@ begin
     application.MessageBox('Não há letras cadastradas para músicas da web!', TITULO, mb_ok + MB_ICONEXCLAMATION);
     exit;
   end;
+  if DM.qrBUSCA.FieldByName('TIPO_PERSO').AsString = 'S' then
+  begin
+    application.MessageBox('Não é possível abrir a letra de coletâneas personalizadas!', TITULO, mb_ok + MB_ICONEXCLAMATION);
+    exit;
+  end;
   abreLetra(DM.qrBUSCA.FieldByName('ID').AsInteger, txtBusca.Text);
 end;
 
@@ -12707,6 +12736,8 @@ begin
 end;
 
 procedure TfmIndex.btMusicaAudioMusicaClick(Sender: TObject);
+var
+  url, urlPB: string;
 begin
   if DM.qrBUSCA.RecordCount <= 0 then
   begin
@@ -12717,6 +12748,21 @@ begin
   if DM.qrBUSCA.FieldByName('TIPO_WEB').AsString = 'S' then
   begin
     application.MessageBox('Não é possível abrir arquivo da músicas de músicas na web!', TITULO, mb_ok + MB_ICONEXCLAMATION);
+    exit;
+  end;
+
+  //Personalizada nao tem ID de acervo: o audio sai do proprio pacote
+  if DM.qrBUSCA.FieldByName('TIPO_PERSO').AsString = 'S' then
+  begin
+    url := DM.qrBUSCA.fieldbyname('URL').AsString;
+    urlPB := DM.qrBUSCA.fieldbyname('URL_INSTRUMENTAL').AsString;
+
+    if not ehArquivoSlides(url) then
+      application.MessageBox('Esta música não é um pacote de slides!', TITULO, mb_ok + MB_ICONEXCLAMATION)
+    else if TComponent(Sender).Tag = 1 then
+      abreSlidesArquivo(url, urlPB, 4)
+    else
+      abreSlidesArquivo(url, urlPB, 5);
     exit;
   end;
 
@@ -17227,6 +17273,352 @@ begin
   end;
 end;
 
+function TfmIndex.extensaoPerso(const arq: string): Boolean;
+const
+  EXTENSOES = '|.slja|.lja|.mp3|.wav|.opus|.wma|.mp4|.avi|.wmv|.mkv|';
+begin
+  Result := Pos('|' + LowerCase(ExtractFileExt(arq)) + '|', EXTENSOES) > 0;
+end;
+
+function TfmIndex.ehArquivoSlides(const arq: string): Boolean;
+var
+  ext: string;
+begin
+  ext := LowerCase(ExtractFileExt(arq));
+  Result := (ext = '.slja') or (ext = '.lja');
+end;
+
+function TfmIndex.dataArquivoPerso(const arq: string): string;
+var
+  dados: TWin32FileAttributeData;
+  st: TSystemTime;
+begin
+  Result := '';
+
+  if not GetFileAttributesEx(PChar(arq), GetFileExInfoStandard, @dados) then
+    Exit;
+  if not FileTimeToSystemTime(dados.ftLastWriteTime, st) then
+    Exit;
+
+  Result := Format('%.4d-%.2d-%.2d %.2d:%.2d:%.2d',
+    [st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond]);
+end;
+
+function TfmIndex.leSlidesArquivo(const arq: string;
+  out titulo, letra: string): Boolean;
+var
+  ext, texto: string;
+  zip: TZipFile;
+  bytes: TBytes;
+  lista: TStringList;
+begin
+  Result := False;
+  titulo := '';
+  letra := '';
+  texto := '';
+  ext := LowerCase(ExtractFileExt(arq));
+
+  if (ext = '.lja') then
+  begin
+    lista := TStringList.Create;
+    try
+      try
+        lista.LoadFromFile(arq, TEncoding.ANSI);
+        texto := lista.Text;
+      except
+        Exit;
+      end;
+    finally
+      lista.Free;
+    end;
+  end
+  else if (ext = '.slja') then
+  begin
+    //So a entrada dos slides, direto para a memoria: extrair o pacote
+    //inteiro custaria megabytes por arquivo
+    zip := TZipFile.Create;
+    try
+      try
+        zip.Open(arq, zmRead);
+        zip.Read('slides.lja', bytes);
+        zip.Close;
+      except
+        Exit;
+      end;
+    finally
+      zip.Free;
+    end;
+
+    if (Length(bytes) = 0) then
+      Exit;
+
+    texto := TEncoding.ANSI.GetString(bytes);
+  end
+  else
+    Exit;
+
+  Result := leDadosSlides(texto, titulo, letra);
+end;
+
+function TfmIndex.semAcentoSQL(const col: string): string;
+const
+  DE: array[0..14] of string =
+    ('á', 'ã', 'â', 'à', 'é', 'ê', 'í', 'ó',
+     'õ', 'ô', 'ú', 'ç', 'É', 'Ê', 'Ó');
+  PARA: array[0..14] of string =
+    ('a', 'a', 'a', 'a', 'e', 'e', 'i', 'o',
+     'o', 'o', 'u', 'c', 'e', 'e', 'o');
+var
+  i: Integer;
+begin
+  Result := 'LOWER(' + col + ')';
+  for i := 0 to High(DE) do
+    Result := 'REPLACE(' + Result + ', ' + QuotedStr(DE[i]) + ', ' +
+      QuotedStr(PARA[i]) + ')';
+  Result := 'LOWER(' + Result + ')';
+end;
+
+procedure TfmIndex.execPerso(const sql: string);
+var
+  qr: TFDQuery;
+begin
+  qr := TFDQuery.Create(nil);
+  try
+    qr.Connection := DM.ADO;
+    qr.SQL.Text := sql;
+    qr.ExecSQL;
+  finally
+    qr.Free;
+  end;
+end;
+
+procedure TfmIndex.preparaTabelaMusicasPerso;
+var
+  qr: TFDQuery;
+  temView: Boolean;
+begin
+  //VARCHAR e nao TEXT de proposito: coluna sem tamanho o FireDAC mapeia como
+  //memo, e memo em grid aparece como (WIDEMEMO)
+  execPerso(
+    'CREATE TABLE IF NOT EXISTS _MUSICAS_PERSONALIZADAS (' +
+    ' ID INTEGER PRIMARY KEY, ID_ALBUM VARCHAR(20),' +
+    ' NOME_ALBUM VARCHAR(200), NOME VARCHAR(200),' +
+    ' URL VARCHAR(400), URL_INSTRUMENTAL VARCHAR(400),' +
+    ' LETRA VARCHAR(4000), DT_ALTERACAO VARCHAR(20))');
+
+  qr := TFDQuery.Create(nil);
+  try
+    qr.Connection := DM.ADO;
+    qr.SQL.Text :=
+      'SELECT COUNT(*) QT FROM sqlite_master' +
+      ' WHERE type = ''view'' AND name = ''LISTA_MUSICAS_PERSO''' +
+      ' AND sql LIKE ''%_MUSICAS_PERSONALIZADAS%''';
+    qr.Open;
+    temView := (qr.Fields[0].AsInteger > 0);
+    qr.Close;
+  finally
+    qr.Free;
+  end;
+
+  if temView then
+    Exit;
+
+  //O ID sai com deslocamento para nao colidir com o do acervo na UNION da
+  //LISTA_MUSICAS_TODAS
+  execPerso('DROP VIEW IF EXISTS LISTA_MUSICAS_PERSO');
+  execPerso(
+    'CREATE VIEW LISTA_MUSICAS_PERSO AS SELECT' +
+    ' (900000 + ID) AS ID, ID_ALBUM,' +
+    ' NOME_ALBUM, NOME_ALBUM AS NOME_ALBUM_COM,' +
+    ' 0 AS FAIXA, NOME, NOME AS NOME_COM,' +
+    ' ''N'' AS TIPO_HASD, ''N'' AS TIPO_JA, ''N'' AS TIPO_BAIXADA,' +
+    ' ''N'' AS TIPO_WEB, ''S'' AS TIPO_PERSO, ''P'' AS TIPO,' +
+    ' '''' AS URL_ALBUM, NOME_ALBUM AS ALBUM, URL, URL_INSTRUMENTAL,' +
+    ' '''' AS IDIOMA, LETRA,' +
+    ' ' + semAcentoSQL('NOME') + ' AS NOME_SEMAC,' +
+    ' ' + semAcentoSQL('LETRA') + ' AS LETRA_SEMAC,' +
+    ' ' + semAcentoSQL('NOME_ALBUM') + ' AS NOME_ALBUM_COM_SEMAC' +
+    ' FROM _MUSICAS_PERSONALIZADAS');
+end;
+
+procedure TfmIndex.insereMusicaPerso(const idAlbum, nomeAlbum, nome, url,
+  urlPB, letra, dt: string);
+var
+  qr: TFDQuery;
+begin
+  qr := TFDQuery.Create(nil);
+  try
+    qr.Connection := DM.ADO;
+    qr.SQL.Text :=
+      'INSERT INTO _MUSICAS_PERSONALIZADAS' +
+      ' (ID_ALBUM, NOME_ALBUM, NOME, URL, URL_INSTRUMENTAL, LETRA, DT_ALTERACAO)' +
+      ' VALUES (:ID_ALBUM, :NOME_ALBUM, :NOME, :URL, :URL_PB, :LETRA, :DT)';
+    qr.ParamByName('ID_ALBUM').AsString := idAlbum;
+    qr.ParamByName('NOME_ALBUM').AsString := nomeAlbum;
+    qr.ParamByName('NOME').AsString := nome;
+    qr.ParamByName('URL').AsString := url;
+    qr.ParamByName('URL_PB').AsString := urlPB;
+    qr.ParamByName('LETRA').AsString := letra;
+    qr.ParamByName('DT').AsString := dt;
+    qr.ExecSQL;
+  finally
+    qr.Free;
+  end;
+end;
+
+procedure TfmIndex.gravaMusicaPerso(const arq, arqPB, idAlbum, nomeAlbum: string;
+  existentes, usados: TStringList);
+var
+  chave, estado, nome, letra: string;
+begin
+  chave := LowerCase(arq);
+  estado := dataArquivoPerso(arq) + '|' + LowerCase(arqPB);
+
+  usados.Add(chave + #9 + '1');
+
+  //Mesmo arquivo, mesma data e mesmo playback: nada a reextrair
+  if (existentes.Values[chave] = estado) then
+    Exit;
+
+  nome := '';
+  letra := '';
+  if not leSlidesArquivo(arq, nome, letra) then
+  begin
+    nome := '';
+    letra := '';
+  end;
+
+  if (nome = '') then
+    nome := Trim(ChangeFileExt(ExtractFileName(arq), ''));
+
+  execPerso('DELETE FROM _MUSICAS_PERSONALIZADAS WHERE LOWER(URL) = ' +
+    QuotedStr(chave));
+  insereMusicaPerso(idAlbum, nomeAlbum, nome, arq, arqPB, letra,
+    dataArquivoPerso(arq));
+end;
+
+procedure TfmIndex.sincronizaPastaPerso(const dir, idAlbum, nomeAlbum: string;
+  existentes, usados: TStringList);
+var
+  sr: TSearchRec;
+  ret, i: Integer;
+  pasta, nome, chave: string;
+  ehPB: Boolean;
+  itens, par: TStringList;
+begin
+  pasta := IncludeTrailingPathDelimiter(dir);
+
+  //Uma entrada por musica, com o playback ao lado  --  [0] cantado  [1] PB
+  itens := TStringList.Create;
+  try
+    ret := FindFirst(pasta + '*.*', faAnyFile, sr);
+    try
+      while (ret = 0) do
+      begin
+        //Subpasta nao entra: so o primeiro nivel
+        if (sr.Name <> '.') and (sr.Name <> '..') and
+           ((sr.Attr and faDirectory) = 0) and extensaoPerso(sr.Name) then
+        begin
+          nome := Trim(ChangeFileExt(sr.Name, ''));
+          ehPB := ehNomePlayback(nome);
+          chave := LowerCase(nome);
+
+          i := itens.IndexOf(chave);
+          if (i < 0) then
+          begin
+            par := TStringList.Create;
+            par.Add('');
+            par.Add('');
+            i := itens.AddObject(chave, par);
+          end;
+
+          par := TStringList(itens.Objects[i]);
+          if ehPB
+            then par[1] := pasta + sr.Name
+            else par[0] := pasta + sr.Name;
+        end;
+        ret := FindNext(sr);
+      end;
+    finally
+      FindClose(sr);
+    end;
+
+    for i := 0 to itens.Count - 1 do
+    begin
+      par := TStringList(itens.Objects[i]);
+      //Playback sem o cantado ao lado nao vira musica propria
+      if (par[0] <> '') then
+        gravaMusicaPerso(par[0], par[1], idAlbum, nomeAlbum, existentes, usados);
+    end;
+  finally
+    for i := 0 to itens.Count - 1 do
+      TStringList(itens.Objects[i]).Free;
+    itens.Free;
+  end;
+end;
+
+procedure TfmIndex.sincronizaMusicasPerso;
+var
+  existentes, usados: TStringList;
+  qr: TFDQuery;
+  idAlbum, nomeAlbum, url: string;
+  i: Integer;
+begin
+  preparaTabelaMusicasPerso;
+
+  existentes := TStringList.Create;
+  usados := TStringList.Create;
+  try
+    existentes.NameValueSeparator := #9;
+    usados.NameValueSeparator := #9;
+
+    qr := TFDQuery.Create(nil);
+    try
+      qr.Connection := DM.ADO;
+      qr.SQL.Text := 'SELECT URL, URL_INSTRUMENTAL, DT_ALTERACAO' +
+        ' FROM _MUSICAS_PERSONALIZADAS';
+      qr.Open;
+      while not qr.Eof do
+      begin
+        existentes.Add(LowerCase(qr.FieldByName('URL').AsString) + #9 +
+          qr.FieldByName('DT_ALTERACAO').AsString + '|' +
+          LowerCase(qr.FieldByName('URL_INSTRUMENTAL').AsString));
+        qr.Next;
+      end;
+      qr.Close;
+    finally
+      qr.Free;
+    end;
+
+    DM.cdsCOLETANEAS_PERSO_IMP.First;
+    while not DM.cdsCOLETANEAS_PERSO_IMP.Eof do
+    begin
+      idAlbum := DM.cdsCOLETANEAS_PERSO_IMP.FieldByName('ID').AsString;
+      nomeAlbum := DM.cdsCOLETANEAS_PERSO_IMP.FieldByName('NOME').AsString;
+      url := DM.cdsCOLETANEAS_PERSO_IMP.FieldByName('URL').AsString;
+      if (DM.cdsCOLETANEAS_PERSO_IMP.FieldByName('URL_INFO').AsString = 'I')
+        then url := ExtractFilePath(Application.ExeName) + url;
+
+      if DirectoryExists(url) then
+        sincronizaPastaPerso(url, idAlbum, nomeAlbum, existentes, usados)
+      else if FileExists(url) and extensaoPerso(url) then
+        gravaMusicaPerso(url, '', idAlbum, nomeAlbum, existentes, usados);
+
+      DM.cdsCOLETANEAS_PERSO_IMP.Next;
+    end;
+
+    //O que sobrou no banco e arquivo apagado, pasta removida ou coletanea
+    //excluida: sai da lista
+    for i := 0 to existentes.Count - 1 do
+      if (usados.IndexOfName(existentes.Names[i]) < 0) then
+        execPerso('DELETE FROM _MUSICAS_PERSONALIZADAS WHERE LOWER(URL) = ' +
+          QuotedStr(existentes.Names[i]));
+  finally
+    usados.Free;
+    existentes.Free;
+  end;
+end;
+
 procedure TfmIndex.importColetaneasPerso;
 var
   url: string;
@@ -17262,6 +17654,8 @@ begin
 
     DM.cdsCOLETANEAS_PERSO_IMP.Next;
   end;
+
+  sincronizaMusicasPerso;
 end;
 
 procedure TfmIndex.inputOpenDialog(Sender: TObject);
