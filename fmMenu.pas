@@ -2324,6 +2324,15 @@ type
     procedure paraAudioES;
     function audioESTocando: Boolean;
 
+    //Projeta (ou fecha) uma área extendida pelo NOME do botão, sem precisar de
+    //um TbsSkinMenuSpeedButton. É o corpo do expandirArea; aquele virou um
+    //envelope que só descobre o nome e o estado a partir do botão skinado.
+    //Quem não tem botão de skin — o menu de músicas novo — chama esta.
+    procedure expandirAreaPorNome(const botao: string; abre: Boolean);
+
+    //A mesma tradução do monitor_tp_config, a partir do nome do botão.
+    function tipoConfigMonitor(const nome: string): string;
+
   end;
 
 var
@@ -2484,8 +2493,8 @@ begin
 
   else if ((Key = VK_F5) or (Key = VK_F9)) then
   begin
-    if (fListaMusica <> nil) and (fListaMusica.Visible) and (fListaMusica.Active) and (fListaMusica.btExp_MenuMusicas.ImageIndex = 53)
-      then fListaMusica.btExp_MenuMusicasClick(fListaMusica.btExp_MenuMusicas)
+    if (fListaMusica <> nil) and (fListaMusica.Visible) and (fListaMusica.Active) and (fListaMusica.podeProjetar)
+      then fListaMusica.projetarMenu
 
     else if (fmIndex.Active) and (PageControl1.Visible) and (PageControl1.ActivePage = tsHinario)
       then DBGrid1DblClick(DBGrid1)
@@ -2830,8 +2839,9 @@ begin
   fListaMusica.Caption := titulo_form;
   fListaMusica.lblTitulo.Caption := titulo_album;
   fListaMusica.lblSubtitulo.Caption := subtitulo_album;
+  //'dir' vazio é o que diz à tela que a coletânea é um álbum do banco; antes
+  //isso era dito atribuindo o DataSource do DBCtrlGrid, que não existe mais.
   fListaMusica.dir := '';
-  fListaMusica.DBCtrlGrid.DataSource := DM.dsMUSICAS;
   fListaMusica.pnlBotoes.Visible := True;
   TbsSkinButtonEx(Sender).ImageList.GetBitmap(
     TbsSkinButtonEx(Sender).ImageIndex,
@@ -7973,7 +7983,6 @@ begin
         fListaMusica.lblTitulo.Caption := DM.qrBUSCA.fieldbyname('NOME').AsString;
         fListaMusica.lblSubtitulo.Caption := '';
         fListaMusica.dir := DM.qrBUSCA.fieldbyname('URL').AsString;
-        fListaMusica.DBCtrlGrid.DataSource := DM.dsArquivos;
         fListaMusica.pnlBotoes.Visible := False;
         fListaMusica.showmodal;
       end
@@ -8929,7 +8938,6 @@ begin
     fListaMusica.lblTitulo.Caption := TbsSkinButtonEx(Sender).Title;
     fListaMusica.lblSubtitulo.Caption := '';
     fListaMusica.dir := URL;
-    fListaMusica.DBCtrlGrid.DataSource := DM.dsArquivos;
     fListaMusica.pnlBotoes.Visible := False;
     TbsSkinButtonEx(Sender).ImageList.GetBitmap(
       TbsSkinButtonEx(Sender).ImageIndex,
@@ -14558,10 +14566,10 @@ end;
 procedure TfmIndex.expandirArea(Sender: TObject);
 var
   abre: Boolean;
-  monitor: Integer;
-  item_config: string;
-  botao: string;
 begin
+  //Envelope do expandirAreaPorNome para os botões skinados, que guardam o
+  //estado aberto/fechado no próprio ImageIndex. Quem não é botão de skin
+  //chama o expandirAreaPorNome direto.
   if Sender = nil then
     abre := False
   else
@@ -14573,12 +14581,26 @@ begin
       abre := False;
   end;
 
-  botao := TbsSkinMenuSpeedButton(Sender).Name;
+  expandirAreaPorNome(TbsSkinMenuSpeedButton(Sender).Name, abre);
 
+  //O ícone volta para "desligado" ao fechar. É coisa do botão skinado, então
+  //ficou aqui, fora do corpo que a tela nova também usa.
+  if (not abre) and (Sender <> nil) then
+  begin
+    if (TbsSkinMenuSpeedButton(Sender).ImageList.Name = 'ico_40x40')
+      then TbsSkinMenuSpeedButton(Sender).ImageIndex := 10
+      else TbsSkinMenuSpeedButton(Sender).ImageIndex := 53;
+  end;
+end;
 
+procedure TfmIndex.expandirAreaPorNome(const botao: string; abre: Boolean);
+var
+  monitor: Integer;
+  item_config: string;
+begin
   if abre = True then
   begin
-    item_config := monitor_tp_config(TbsSkinMenuSpeedButton(Sender));
+    item_config := tipoConfigMonitor(botao);
     monitor := strtoint(lerParam(item_config, 'Monitor', '2'));
     if (Screen.MonitorCount < monitor) then
     begin
@@ -14820,7 +14842,7 @@ begin
     end;
 
   end
-  else if Sender <> nil then
+  else
   begin
     if (botao = 'btExp_MenuMusicas') then
     begin
@@ -14872,11 +14894,6 @@ begin
       if fMonitorRelogio <> nil then
         fMonitorRelogio.Close;
     end;
-
-    if (TbsSkinMenuSpeedButton(Sender).ImageList.Name = 'ico_40x40')
-      then TbsSkinMenuSpeedButton(Sender).ImageIndex := 10
-      else TbsSkinMenuSpeedButton(Sender).ImageIndex := 53;
-
   end;
 
 
@@ -15237,7 +15254,10 @@ begin
     fMonitorMenuMusicas.lblTitulo.Caption := fListaMusica.lblTitulo.Caption;
     fMonitorMenuMusicas.lblSubtitulo.Caption := fListaMusica.lblSubtitulo.Caption;
     fMonitorMenuMusicas.imgCapa.Picture := fListaMusica.imgCapa.Picture;
-    fMonitorMenuMusicas.DBCtrlGrid.RowCount := Trunc(fMonitorMenuMusicas.DBCtrlGrid.ClientHeight / 80);
+    //A grade projetada recebe os itens, em vez de seguir o cursor de um
+    //dataset. Com isso a rolagem do operador deixou de precisar mover o
+    //cursor só para arrastar a projeção junto.
+    fMonitorMenuMusicas.defineItens(fListaMusica.itensDaTela);
   end;
 
 
@@ -15829,20 +15849,25 @@ begin
 end;
 
 function TfmIndex.monitor_tp_config(botao: TbsSkinMenuSpeedButton): string;
+begin
+  Result := tipoConfigMonitor(botao.Name);
+end;
+
+function TfmIndex.tipoConfigMonitor(const nome: string): string;
 var
   tp: string;
 begin
   tp := '';
-       if botao.Name = 'btExp_Biblia' then tp := 'Biblia'
-  else if botao.Name = 'btExp_BibliaBusca' then tp := 'Busca Biblica'
-  else if botao.Name = 'btExp_EscolaSabatina' then tp := 'Escola Sabatina'
-  else if botao.Name = 'btExp_Sorteio' then tp := 'Sorteio'
-  else if botao.Name = 'btExp_SorteioNM' then tp := 'Sorteio Nomes'
-  else if botao.Name = 'btExp_Cronometro' then tp := 'Cronometro'
-  else if botao.Name = 'btExp_PainelD' then tp := 'Painel Dinamico'
-  else if botao.Name = 'btExp_TextoInterativo' then tp := 'Texto Interativo'
-  else if botao.Name = 'btExp_Relogio' then tp := 'Relogio'
-  else if botao.Name = 'btExp_MenuMusicas' then tp := 'Lista Musicas';
+       if nome = 'btExp_Biblia' then tp := 'Biblia'
+  else if nome = 'btExp_BibliaBusca' then tp := 'Busca Biblica'
+  else if nome = 'btExp_EscolaSabatina' then tp := 'Escola Sabatina'
+  else if nome = 'btExp_Sorteio' then tp := 'Sorteio'
+  else if nome = 'btExp_SorteioNM' then tp := 'Sorteio Nomes'
+  else if nome = 'btExp_Cronometro' then tp := 'Cronometro'
+  else if nome = 'btExp_PainelD' then tp := 'Painel Dinamico'
+  else if nome = 'btExp_TextoInterativo' then tp := 'Texto Interativo'
+  else if nome = 'btExp_Relogio' then tp := 'Relogio'
+  else if nome = 'btExp_MenuMusicas' then tp := 'Lista Musicas';
 
   Result := tp;
 end;

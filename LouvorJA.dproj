@@ -156,9 +156,7 @@
             <Form>fMusica</Form>
         </DCCReference>
         <DCCReference Include="components\bass24\delphi\bass.pas"/>
-        <DCCReference Include="fmListaMusica.pas">
-            <Form>fListaMusica</Form>
-        </DCCReference>
+        <DCCReference Include="fmListaMusica.pas"/>
         <DCCReference Include="fmMusicaOperador.pas">
             <Form>fMusicaOperador</Form>
         </DCCReference>
@@ -239,10 +237,7 @@
             <Form>fMonitorBiblia</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="fmMonitorMenuMusicas.pas">
-            <Form>fMonitorMenuMusicas</Form>
-            <FormType>dfm</FormType>
-        </DCCReference>
+        <DCCReference Include="fmMonitorMenuMusicas.pas"/>
         <DCCReference Include="fmIdentificaMonitores.pas">
             <Form>fIdentificaMonitores</Form>
             <FormType>dfm</FormType>
@@ -252,6 +247,12 @@
         <DCCReference Include="fmQRCode.pas"/>
         <DCCReference Include="uInstanciaUnica.pas"/>
         <DCCReference Include="uArquivosWeb.pas"/>
+        <DCCReference Include="ui\uTema.pas"/>
+        <DCCReference Include="ui\uControles.pas"/>
+        <DCCReference Include="ui\uJanela.pas"/>
+        <DCCReference Include="ui\musicas\uMenuMusicas.pas"/>
+        <DCCReference Include="ui\musicas\uListaMusicas.pas"/>
+        <DCCReference Include="ui\musicas\uGradeMusicas.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

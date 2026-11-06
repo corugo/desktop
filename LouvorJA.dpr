@@ -15,7 +15,7 @@ uses
   fmFavoritos in 'fmFavoritos.pas' {fFavoritos},
   fmMusica in 'fmMusica.pas' {fMusica},
   bass in 'components\bass24\delphi\bass.pas',
-  fmListaMusica in 'fmListaMusica.pas' {fListaMusica},
+  fmListaMusica in 'fmListaMusica.pas',
   fmMusicaOperador in 'fmMusicaOperador.pas' {fMusicaOperador},
   fmLiturgia in 'fmLiturgia.pas' {fLiturgia},
   fmArquivosFalta in 'fmArquivosFalta.pas' {fArquivosFalta},
@@ -37,13 +37,19 @@ uses
   fmMonitorCronometroCulto in 'fmMonitorCronometroCulto.pas' {fMonitorCronometroCulto},
   fmMonitorBibliaBusca in 'fmMonitorBibliaBusca.pas' {fMonitorBibliaBusca},
   fmMonitorBiblia in 'fmMonitorBiblia.pas' {fMonitorBiblia},
-  fmMonitorMenuMusicas in 'fmMonitorMenuMusicas.pas' {fMonitorMenuMusicas},
+  fmMonitorMenuMusicas in 'fmMonitorMenuMusicas.pas',
   fmIdentificaMonitores in 'fmIdentificaMonitores.pas' {fIdentificaMonitores},
   fmCopiaLiturgiaDia in 'fmCopiaLiturgiaDia.pas',
   DelphiZXingQRCode in 'components\DelphiZXingQRCode\DelphiZXingQRCode.pas',
   fmQRCode in 'fmQRCode.pas',
   uInstanciaUnica in 'uInstanciaUnica.pas',
-  uArquivosWeb in 'uArquivosWeb.pas';
+  uArquivosWeb in 'uArquivosWeb.pas',
+  uTema in 'ui\uTema.pas',
+  uControles in 'ui\uControles.pas',
+  uJanela in 'ui\uJanela.pas',
+  uMenuMusicas in 'ui\musicas\uMenuMusicas.pas',
+  uListaMusicas in 'ui\musicas\uListaMusicas.pas',
+  uGradeMusicas in 'ui\musicas\uGradeMusicas.pas';
 
 {$R *.res}
 
