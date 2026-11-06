@@ -25,6 +25,9 @@ type
   private
     pnlTopo: TPainelLiso;
     grade: TGradeMusicas;
+    lblTitulo: TLabel;
+    lblSubtitulo: TLabel;
+    imgCapa: TImage;
     procedure montaTela;
     procedure aoRedimensionar(Sender: TObject);
     procedure aoAtivar(Sender: TObject);
@@ -32,13 +35,15 @@ type
     procedure aoTeclaSolta(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure CreateParams(var Params: TCreateParams); override;
   public
-    //Lidos de fora pelo fmIndex.copiaDadosTelaExtendida, que copia o que está
-    //na tela do operador. Os nomes são os mesmos de antes, de propósito.
-    lblTitulo: TLabel;
-    lblSubtitulo: TLabel;
-    imgCapa: TImage;
-
     constructor Create(AOwner: TComponent); override;
+
+    //O QUE ESTA JANELA RECEBE SAO DADOS, NUNCA PROPRIEDADES DE CONTROLE.
+    //Antes o copiaDadosTelaExtendida alcancava lblTitulo, lblSubtitulo e
+    //imgCapa daqui de fora e copiava Caption e Picture de um controle para
+    //o outro -- que e o que os monitores antigos ainda fazem, em dezenas de
+    //linhas por tela. Sendo dado, a mesma informacao serve N janelas de
+    //tamanhos diferentes, e nenhuma delas precisa parecer com a do operador.
+    procedure defineCabecalho(const titulo, subtitulo: string; capa: TPicture);
 
     //A lista que a congregação vê, e qual item está no ar.
     procedure defineItens(const itens: TItensMenu);
@@ -160,6 +165,19 @@ begin
 end;
 
 { conteúdo }
+
+procedure TfMonitorMenuMusicas.defineCabecalho(const titulo,
+  subtitulo: string; capa: TPicture);
+begin
+  lblTitulo.Caption := titulo;
+  lblSubtitulo.Caption := subtitulo;
+
+  if (capa <> nil) then
+    imgCapa.Picture := capa
+  else
+    imgCapa.Picture := nil;
+end;
+
 
 procedure TfMonitorMenuMusicas.defineItens(const itens: TItensMenu);
 begin

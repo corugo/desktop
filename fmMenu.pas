@@ -15251,12 +15251,17 @@ var
 begin
   if (fMonitorMenuMusicas <> nil) then
   begin
-    fMonitorMenuMusicas.lblTitulo.Caption := fListaMusica.lblTitulo.Caption;
-    fMonitorMenuMusicas.lblSubtitulo.Caption := fListaMusica.lblSubtitulo.Caption;
-    fMonitorMenuMusicas.imgCapa.Picture := fListaMusica.imgCapa.Picture;
+    //A projecao recebe DADOS, nao propriedades de controle: um titulo, um
+    //subtitulo, uma capa e a lista de itens -- o contrario das dezenas de
+    //linhas de `Font :=` / `Caption :=` / `Refresh` que os monitores antigos
+    //logo abaixo ainda exigem. E o que permite a mesma informacao ser
+    //projetada em mais de uma janela, cada uma com o seu tamanho.
+    fMonitorMenuMusicas.defineCabecalho(fListaMusica.lblTitulo.Caption,
+      fListaMusica.lblSubtitulo.Caption, fListaMusica.imgCapa.Picture);
+
     //A grade projetada recebe os itens, em vez de seguir o cursor de um
     //dataset. Com isso a rolagem do operador deixou de precisar mover o
-    //cursor só para arrastar a projeção junto.
+    //cursor so para arrastar a projecao junto.
     fMonitorMenuMusicas.defineItens(fListaMusica.itensDaTela);
   end;
 
