@@ -18,7 +18,8 @@ uses
   System.RegularExpressions, System.NetEncoding, System.IOUtils,
   BusinessSkinForm, bsSkinMenus, bsSkinCtrls, bsSkinTabs, bsButtonGroup,
   bsSkinBoxCtrls, bsSkinExCtrls, bsribbon, bsdbctrls, bsSkinShellCtrls,
-  bsSkinGrids, bsDBGrids, bsColorCtrls, bsPngImageList;
+  bsSkinGrids, bsDBGrids, bsColorCtrls, bsPngImageList,
+  uTema, uItensLiturgia, uListaLiturgia, uMenuMusicas;
   (*"MidasLib" NECESSÁRIA PARA EVITAR ERRO DE ACCESS VIOLATION NO DM.cds*)
 
 type
@@ -647,8 +648,6 @@ type
     lblDoxologiaCate: TbsSkinLabel;
     btErro: TbsSkinButton;
     tsLiturgia: TbsSkinTabSheet;
-    sbLiturgia: TbsSkinScrollBox;
-    bsSkinScrollBar3: TbsSkinScrollBar;
     GridPanel23: TGridPanel;
     lcal_2: TbsSkinSpeedButton;
     lcal_3: TbsSkinSpeedButton;
@@ -663,21 +662,6 @@ type
     bsRibbonDivider17: TbsRibbonDivider;
     bsRibbonDivider19: TbsRibbonDivider;
     bsRibbonDivider21: TbsRibbonDivider;
-    lit_modItem: TbsSkinPanel;
-    lit_modItem_icomus6: TbsPngImageView;
-    lit_modItem_icomus4: TbsPngImageView;
-    lit_modItem_icomus3: TbsPngImageView;
-    lit_modItem_icomus1: TbsPngImageView;
-    lit_modItem_btedit: TbsPngImageView;
-    lit_modItem_divider: TbsRibbonDivider;
-    lit_modItem_btmove: TPanel;
-    lit_modItem_bticon: TPanel;
-    lit_modItem_bticon_img: TbsPngImageView;
-    lit_modItem_checkb: TbsSkinCheckBox;
-    lit_modItem_texto: TbsSkinPanel;
-    lit_modItem_subtitulo: TbsSkinStdLabel;
-    lit_modItem_titulo: TbsSkinStdLabel;
-    lit_modItem_btmove_img: TbsPngImageView;
     mmLiturgia: TbsSkinMemo;
     bsSkinPanel3: TbsSkinPanel;
     bsSkinButton34: TbsSkinButton;
@@ -716,7 +700,6 @@ type
     bsFormatSlidePerso: TbsSkinPanel;
     bsSkinSpeedButton1: TbsSkinSpeedButton;
     rbHinoTipo: TbsSkinRadioGroup;
-    lit_modItem_icomus2: TbsPngImageView;
     bsRibbonGroup71: TbsRibbonGroup;
     GridPanel27: TGridPanel;
     bsSkinStdLabel107: TbsSkinStdLabel;
@@ -933,7 +916,6 @@ type
     bsPngImageView16: TbsPngImageView;
     bsPngImageView17: TbsPngImageView;
     bsPngImageView18: TbsPngImageView;
-    lit_modItem_icomus5: TbsPngImageView;
     gpLiturgiaDes: TGridPanel;
     lbLiturgia: TListBox;
     lbLiturgiaPos: TListBox;
@@ -2002,22 +1984,38 @@ type
     procedure bgDoxologiaCateButtonClicked(Sender: TObject; Index: Integer);
     procedure pnlDoxologiaMusicasClose(Sender: TObject);
     procedure btErroClick(Sender: TObject);
-    procedure move_MouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure move_MouseMove(Sender: TObject; Shift: TShiftState; X,
-      Y: Integer);
-    procedure move_MouseUp(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure PanelColorClick(Sender: TObject);
+    //Monta o controle da lista. Chamado do FormCreate.
+    //Le a paleta do skin e a joga no uTema. Ponto unico.
+    procedure aplicaTemaDaInterface;
+    procedure montaListaLiturgia;
+    //Le os parametros de um item e devolve o modelo dele.
+    function itemDaLiturgia(const item: string;
+      ordem: Integer): TItemLiturgia;
+    function textoDoItemAgendado(const item: string): string;
+    function musicaDoItemTemPlayback(const item: string): Boolean;
+    //Remonta a lista a partir do lbLiturgia, sem reler a ordem.
+    procedure desenhaLiturgia;
+    procedure escolheCorDoItemLiturgia(const item: string);
+    procedure marcaItemLiturgia(lista: TListaLiturgia;
+      indice: Integer; marcado: Boolean);
+    //O corpo do antigo lit_modItem_textoClick: executa o item. O tag e
+    //o mesmo de antes -- 0 para o corpo do item, 1..6 para as acoes.
+    procedure executaItemLiturgia(const item: string; tag: Integer);
+    //Os eventos do controle.
+    procedure litAbrirItem(Sender: TObject; indice: Integer);
+    procedure litAcao(Sender: TObject; indice: Integer;
+      acao: TAcaoItem);
+    procedure litEditar(Sender: TObject; indice: Integer);
+    procedure litCor(Sender: TObject; indice: Integer);
+    procedure litMarcar(Sender: TObject; indice: Integer;
+      marcado: Boolean);
+    procedure litMover(Sender: TObject; de, para: Integer);
     procedure tsLiturgiaShow(Sender: TObject);
     procedure carregaLiturgia(semana: Integer);
     procedure carregaItemLiturgia(item: string;ordem: Integer = 0);
     procedure apagaItemLiturgia(item: string);
     procedure salvaItensLiturgia();
     function CopyComponent(Component,AParent: TComponent; NewComponentName: String): TComponent;
-    procedure lit_modItem_checkbClick(Sender: TObject);
-    procedure lit_modItem_bteditClick(Sender: TObject);
-    procedure lit_modItem_textoClick(Sender: TObject);
     procedure bsSkinButton34Click(Sender: TObject);
     procedure bsRibbon1Buttons5Click(Sender: TObject);
     procedure bsRibbon1Buttons0Click(Sender: TObject);
@@ -2221,9 +2219,9 @@ type
     bass_player: HSTREAM;
     bass_escsb: HSTREAM;
     arquivo_escsb: string;
-    move_x,move_y:integer;
-    move_panel: TPanel;
-    move: Boolean;
+    //A lista da liturgia: um controle desenhado, no lugar do TbsSkinScrollBox
+    //com um painel clonado por item. Criado no FormCreate.
+    listaLiturgia: TListaLiturgia;
     FLogChamadas: Integer;  // contador para checagem de truncamento do louvorja.log
     arquivo_recebido: string;  // caminho enviado por outra instância (WM_COPYDATA)
 
@@ -2421,6 +2419,8 @@ begin
   DragAcceptFiles(Self.Handle, True);
   FLitClipboard := TStringList.Create;
   FLitClipboardSemana := 0;
+
+  montaListaLiturgia;
 end;
 
 procedure TfmIndex.FormDestroy(Sender: TObject);
@@ -5642,21 +5642,6 @@ begin
 
 end;
 
-procedure TfmIndex.PanelColorClick(Sender: TObject);
-var
-  Panel: TPanel;
-begin
-  if Sender is TPanel
-    then Panel := TPanel(TPanel(Sender))
-    else Panel := TPanel(TPanel(Sender).Parent);
-
-  DM.ColorDialog.Color := Panel.Color;
-  DM.ColorDialog.Execute;
-  Panel.Color := DM.ColorDialog.Color;
-
-  gravaParam(Panel.Parent.Name, 'cor', ColorToString(DM.ColorDialog.Color), arq_liturgia);
-end;
-
 procedure TfmIndex.pnlfmBarraTituloFormDblClick(Sender: TObject);
 begin
   btwsMaximizedClick(Sender);
@@ -6283,230 +6268,291 @@ begin
   ogFavoritos.ItemIndex := i;
 end;
 
-procedure TfmIndex.carregaItemLiturgia(item: string; ordem: integer);
-var
-  i: integer;
-  tipo,subtipo: string;
-  panel,panel2: TPanel;
-  image: TbsPngImageView;
-  checkbox: TbsSkinCheckBox;
-  slabel: TbsSkinStdLabel;
-  pb: Boolean;
+//Le a paleta do skin ativo e a joga no uTema, para as telas desenhadas
+//seguirem o tema do programa.
+//
+//PONTO UNICO, e isso e o que importa: as cores do uTema sao variaveis
+//GLOBAIS, entao quem aplicava mandava na aparencia de todo mundo. Antes so o
+//construtor do fListaMusica aplicava -- e a consequencia era que a liturgia
+//ficava ESCURA (os padroes escritos no uTema) enquanto o programa e claro, e
+//passava a ficar certa se o operador tivesse aberto uma coletanea antes. A
+//aparencia dependia da ordem em que as telas foram abertas.
+//
+//Chamado do cbLayoutChange, que e o unico lugar onde o skin muda -- e que
+//roda TAMBEM no startup, porque o fmIniciando atribui cbLayout.ItemIndex e
+//atribuir ItemIndex em combo skinned dispara o OnChange (secao 3 do
+//CLAUDE.md). Ou seja: a paleta esta aplicada antes de qualquer tela aparecer,
+//e trocar de skin leva as listas junto.
+//
+//E o unico ponto do codigo novo que toca no BusinessSkinForm, e toca so para
+//ler numeros: o uTema continua sem conhece-lo.
+procedure TfmIndex.aplicaTemaDaInterface;
 begin
-  tipo := lerParam(item, 'tipo', '', arq_liturgia);
-  subtipo := lerParam(item, 'subtipo', '', arq_liturgia);
+  if (DM = nil) or (DM.bsSkinData1 = nil) or
+     (DM.bsSkinData1.SkinColors = nil) then
+    Exit;
 
-  panel := TPanel(FindComponent(item));
-  if Assigned(Panel) then
-  begin
-    for i := pred(panel.ControlCount) downto 0 do
-    begin
-      try
-        if (panel.Controls[i].Visible) and (panel.Controls[i].Tag <> 9999)
-          then panel.Controls[i].Destroy;
-      except
-        //
-      end;
-    end;
-  end
-  else
-  begin
-    panel := TPanel(CopyComponent(lit_modItem,sbLiturgia,item));
-    panel.OnClick := lit_modItem.OnClick;
+  AplicaPaleta(
+    DM.bsSkinData1.SkinColors.cBtnFace,        //fundo atras dos itens
+    DM.bsSkinData1.SkinColors.cWindow,         //fundo de cada item
+    DM.bsSkinData1.SkinColors.cWindowText,     //texto
+    DM.bsSkinData1.SkinColors.cHighLight,      //linha selecionada
+    DM.bsSkinData1.SkinColors.cHighLightText,  //texto dentro dela
+    DM.bsSkinData1.SkinColors.cBtnShadow,      //separador e trilho
+    DM.bsSkinData1.SkinColors.cHighLight);     //barra do item no ar
 
-    panel2 := TPanel(CopyComponent(lit_modItem_btmove,panel,item+'_btmove'));
-    panel2.OnMouseDown := lit_modItem_btmove.OnMouseDown;
-    panel2.OnMouseMove := lit_modItem_btmove.OnMouseMove;
-    panel2.OnMouseUp := lit_modItem_btmove.OnMouseUp;
-    panel2.Visible := not cbBloqItens.Checked;
-    image := TbsPngImageView(CopyComponent(lit_modItem_btmove_img,panel2,item+'_btmove_img'));
-    image.OnMouseDown := lit_modItem_btmove_img.OnMouseDown;
-    image.OnMouseMove := lit_modItem_btmove_img.OnMouseMove;
-    image.OnMouseUp := lit_modItem_btmove_img.OnMouseUp;
-    image := TbsPngImageView(CopyComponent(lit_modItem_btedit,panel,item+'_btedit'));
-    image.OnClick := lit_modItem_btedit.OnClick;
-    image.Visible := not cbBloqItens.Checked;
-    CopyComponent(lit_modItem_divider,panel,item+'_divider');
+  //A lista da liturgia le as cores na hora de pintar, entao basta invalidar.
+  if (listaLiturgia <> nil) then
+    listaLiturgia.Invalidate;
+end;
+
+//A lista da liturgia, montada em codigo. Substitui o sbLiturgia
+//(TbsSkinScrollBox) com um painel clonado por item -- ver o cabecalho do
+//uListaLiturgia para o porque.
+procedure TfmIndex.montaListaLiturgia;
+begin
+  listaLiturgia := TListaLiturgia.Create(Self);
+  listaLiturgia.Parent := tsLiturgia;
+  listaLiturgia.Align := alClient;
+  listaLiturgia.imagens := DM.ico_24x24;
+  //O lapis de editar e o unico icone que vem do ico_16x16.
+  listaLiturgia.imagens16 := DM.ico_16x16;
+  listaLiturgia.OnAbrirItem := litAbrirItem;
+  listaLiturgia.OnAcao := litAcao;
+  listaLiturgia.OnEditar := litEditar;
+  listaLiturgia.OnCor := litCor;
+  listaLiturgia.OnMarcar := litMarcar;
+  listaLiturgia.OnMover := litMover;
+end;
+
+//O texto do item agendado: o nome do arquivo marcado para a data deste dia.
+//Era um bloco dentro do carregaItemLiturgia.
+function TfmIndex.textoDoItemAgendado(const item: string): string;
+begin
+  Result := 'Nao ha arquivo agendado para esta data!';
+
+  if not DM.cdsItensAgendados.Active then
+  begin
+    DM.cdsItensAgendados.CreateDataSet;
+    DM.cdsItensAgendados.IndexName := '';
+    DM.cdsItensAgendados.IndexFieldNames := 'DATA';
+    DM.cdsItensAgendados.LogChanges := False;
   end;
 
-  if (tipo <> 'categoria') then
-  begin
-    panel2 := TPanel(CopyComponent(lit_modItem_bticon,panel,item+'_bticon'));
-    panel2.OnClick := lit_modItem_bticon.OnClick;
-    panel2.Color := StringToColor(lerParam(item, 'cor', '$004F0000', arq_liturgia));
-    image := TbsPngImageView(CopyComponent(lit_modItem_bticon_img,panel2,item+'_bticon_img'));
-    image.OnClick := lit_modItem_bticon_img.OnClick;
-    panel2 := TPanel(CopyComponent(lit_modItem_texto,panel,item+'_texto'));
-    panel2.OnClick := lit_modItem_texto.OnClick;
-    slabel := TbsSkinStdLabel(CopyComponent(lit_modItem_subtitulo,panel2,item+'_subtitulo'));
-    slabel.OnClick := lit_modItem_subtitulo.OnClick;
-    if (tipo = 'itensagendados') then
-    begin
-      slabel.Caption := '';
-      if not DM.cdsItensAgendados.Active then
-      begin
-        DM.cdsItensAgendados.CreateDataSet;
-        DM.cdsItensAgendados.IndexName := '';
-        DM.cdsItensAgendados.IndexFieldNames := 'DATA';
-        DM.cdsItensAgendados.LogChanges := False;
-      end;
+  if (FileExists(dir_dados + 'itensAgendados.xml')) then
+    DM.cdsItensAgendados.LoadFromFile(dir_dados + 'itensAgendados.xml');
+  DM.cdsItensAgendados.Open;
 
-      if (FileExists(dir_dados + 'itensAgendados.xml')) then
-        DM.cdsItensAgendados.LoadFromFile(dir_dados + 'itensAgendados.xml');
-      DM.cdsItensAgendados.Open;
+  DM.cdsItensAgendados.Filtered := False;
+  if DM.cdsItensAgendados.Locate('CATEGORIA;DATA',
+    VarArrayOf([lerParam(item, 'id', '', arq_liturgia),
+      IncDay(now(), StrToIntDef(loadCol.Strings.Values['LITURGIA:SEMANA'],
+        DayOfWeek(now())) - DayOfWeek(now()))]), []) then
+    Result := 'Arquivo ' +
+      DM.cdsItensAgendados.FieldByName('ARQUIVO').AsString;
+end;
 
-      DM.cdsItensAgendados.Filtered := false;
-      if (DM.cdsItensAgendados.Locate('CATEGORIA;DATA', VarArrayOf([lerParam(item, 'id', '', arq_liturgia),IncDay(now(),strtoint(loadCol.Strings.Values['LITURGIA:SEMANA']) - dayofweek(now()))]), []))
-        then slabel.Caption := 'Arquivo '+DM.cdsItensAgendados.FieldByName('ARQUIVO').AsString
-        else slabel.Caption := 'Não há arquivo agendado para esta data!';
-    end
-    else slabel.Caption := lerParam(item, 'subitem', '', arq_liturgia);
-    slabel := TbsSkinStdLabel(CopyComponent(lit_modItem_titulo,panel2,item+'_titulo'));
-    slabel.OnClick := lit_modItem_titulo.OnClick;
-    slabel.Caption := lerParam(item, 'item', '', arq_liturgia);
-    slabel.Align := alTop;
-    checkbox := TbsSkinCheckBox(CopyComponent(lit_modItem_checkb,panel,item+'_checkb'));
-    checkbox.OnClick := lit_modItem_checkb.OnClick;
-    checkbox.Checked := (lerParam(item, 'checked', '', arq_liturgia) = FormatDateTime('dd/mm/yyyy',Now()));
-    panel.AlignWithMargins := false;
-    panel.Height := 56;
-  end
-  else
+//A musica deste item tem playback? E a MESMA regra do menu de musicas
+//(URL_INSTRUMENTAL preenchido), e e ela que decide quais dos seis botoes
+//ficam ativos e quais saem apagados.
+function TfmIndex.musicaDoItemTemPlayback(const item: string): Boolean;
+begin
+  //Escolha na hora (musica = -1) nao da para conferir ainda: oferece os dois
+  //playbacks, como o codigo antigo fazia.
+  if (lerParam(item, 'musica', '0', arq_liturgia) = '-1') then
   begin
-    panel2 := TPanel(CopyComponent(lit_modItem_bticon,panel,item+'_bticon'));
-    panel2.OnClick := PanelColorClick;
-    panel2.Color := StringToColor(lerParam(item, 'cor', '$004F0000', arq_liturgia));
-    panel2.Align := alClient;
-//    panel.Color := StringToColor(lerParam(item, 'cor', '$004F0000', arq_liturgia));
-    panel.Height := 36;
-    panel.AlignWithMargins := True;
-    panel.Margins.Top := 20;
-    panel.Margins.Left := 0;
-    panel.Margins.Right := 0;
-    panel.Margins.Bottom := 0;
-    //panel3 := TPanel(CopyComponent(lit_modItem_texto,panel2,item+'_texto'));
-    //panel3.OnClick := lit_modItem_texto.OnClick;
-    slabel := TbsSkinStdLabel(CopyComponent(lit_modItem_titulo,panel2,item+'_titulo'));
-    slabel.Align := alClient;
-    slabel.UseSkinColor := false;
-    slabel.Font.Color := clWhite;
-//    slabel.OnClick := lit_modItem_titulo.OnClick;
-    slabel.Caption := lerParam(item, 'item', '', arq_liturgia);
-    slabel.Font.Color := clWhite;
-    slabel.Align := alClient;
-    slabel.Alignment := taCenter;
-    slabel.Layout := tlCenter;
+    Result := True;
+    Exit;
   end;
 
-  if (pnlModDes.Visible)
-    then slabel.Caption := slabel.Caption + ' | ' + item + ' ['+inttostr(ordem)+']';
+  DM.qrMUSICA.Close;
+  DM.qrMUSICA.ParamByName('ID').Value :=
+    StrToInt('0' + lerParam(item, 'musica', '0', arq_liturgia));
+  DM.qrMUSICA.Open;
 
-  if (tipo = 'musica') then
+  if (DM.qrMUSICA.RecordCount <= 0) then
+    Result := True
+  else
+    Result := (DM.qrMUSICA.FieldByName('URL_INSTRUMENTAL').AsString <> '');
+end;
+
+function TfmIndex.itemDaLiturgia(const item: string;
+  ordem: Integer): TItemLiturgia;
+begin
+  Result.ident := item;
+  Result.tipo := lerParam(item, 'tipo', '', arq_liturgia);
+  Result.subtipo := lerParam(item, 'subtipo', '', arq_liturgia);
+  Result.titulo := lerParam(item, 'item', '', arq_liturgia);
+  Result.cor := lerParam(item, 'cor', COR_PADRAO, arq_liturgia);
+  Result.marcado := (lerParam(item, 'checked', '', arq_liturgia) =
+    FormatDateTime('dd/mm/yyyy', Now()));
+  Result.subtitulo := '';
+  Result.acoes := [];
+  Result.possiveis := [];
+
+  if not EhDivisoria(Result.tipo) then
   begin
-    if (subtipo = 'hasd')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 47
-    else if (subtipo = 'ja')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 46
-    else if (subtipo = 'div')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 45
-    else TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 60;
-
-    if lerParam(item, 'musica', '0', arq_liturgia) = '-1'
-      then pb := true
+    if SameText(Result.tipo, TIPO_AGENDADOS)
+      or SameText(Result.tipo, TIPO_AGENDADOS_LEGADO) then
+      Result.subtitulo := textoDoItemAgendado(item)
     else
-    begin
-      DM.qrMUSICA.Close;
-      DM.qrMUSICA.ParamByName('ID').Value := StrToInt('0'+lerParam(item, 'musica', '0', arq_liturgia));
-      DM.qrMUSICA.Open;
-      if DM.qrMUSICA.RecordCount <= 0
-        then pb := true
-      else if (DM.qrMUSICA.FieldByName('URL_INSTRUMENTAL').AsString <> '')
-        then pb := True
-        else pb := False;
-    end;
+      Result.subtitulo := lerParam(item, 'subitem', '', arq_liturgia);
 
-    image := TbsPngImageView(CopyComponent(lit_modItem_icomus1,panel,item+'_icomus1'));
-    image.OnClick := lit_modItem_icomus1.OnClick;
-    if pb then
+    if EhMusica(Result.tipo) then
     begin
-      image := TbsPngImageView(CopyComponent(lit_modItem_icomus2,panel,item+'_icomus2'));
-      image.OnClick := lit_modItem_icomus2.OnClick;
+      //As seis colunas aparecem sempre; as que nao se aplicam saem apagadas.
+      //Antes a liturgia ESCONDIA os dois botoes de playback, e coluna vazia
+      //nao distingue "esta musica nao tem playback" de "ninguem usa esta
+      //coluna" -- mesma escolha ja feita no menu de musicas.
+      Result.possiveis := PossiveisDaMusica;
+      Result.acoes := AcoesDaMusica(musicaDoItemTemPlayback(item));
     end;
-    image := TbsPngImageView(CopyComponent(lit_modItem_icomus3,panel,item+'_icomus3'));
-    image.OnClick := lit_modItem_icomus3.OnClick;
-    image := TbsPngImageView(CopyComponent(lit_modItem_icomus4,panel,item+'_icomus4'));
-    image.OnClick := lit_modItem_icomus4.OnClick;
-    if pb then
-    begin
-      image := TbsPngImageView(CopyComponent(lit_modItem_icomus5,panel,item+'_icomus5'));
-      image.OnClick := lit_modItem_icomus5.OnClick;
-    end;
-    image := TbsPngImageView(CopyComponent(lit_modItem_icomus6,panel,item+'_icomus6'));
-    image.OnClick := lit_modItem_icomus6.OnClick;
-    TbsPngImageView(FindComponent(item+'_icomus6')).Left := 0;
-    if pb then TbsPngImageView(FindComponent(item+'_icomus5')).Left := 0;
-    TbsPngImageView(FindComponent(item+'_icomus4')).Left := 0;
-    TbsPngImageView(FindComponent(item+'_icomus3')).Left := 0;
-    if pb then TbsPngImageView(FindComponent(item+'_icomus2')).Left := 0;
-    TbsPngImageView(FindComponent(item+'_icomus1')).Left := 0;
-  end
-  else if (tipo = 'site') then
-  begin
-    subtipo := lerParam(item, 'subitem', '', arq_liturgia);
-    if  (Pos('.youtube.',subtipo) > 0)
-     or (Pos('/youtube.',subtipo) > 0)
-     or (Pos('.youtu.be.',subtipo) > 0)
-     or (Pos('/youtu.be.',subtipo) > 0)
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 38
-      else TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 49;
-  end
-  else
-  if (tipo = 'arquivo') then
-  begin
-    if (subtipo = 'dir')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 32
-    else if (subtipo = 'arq')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 4;
-  end
-  else
-  if (tipo = 'anotacao')
-    then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 63
-  else
-  if (tipo = 'itensagendados')
-    then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 83;
+  end;
 
-  if (ordem > 0) then
-    panel.Top := (panel.Height + 20) * (ordem + 3);
+  if pnlModDes.Visible then
+    Result.titulo := Result.titulo + ' | ' + item + ' [' + IntToStr(ordem) +
+      ']';
+end;
 
-  panel.Visible := True;
+//Remonta a lista inteira a partir do lbLiturgia, que e a ordem corrente.
+//Custa pouco: nao cria controle nenhum, so le parametro e redesenha.
+procedure TfmIndex.desenhaLiturgia;
+var
+  i: Integer;
+  itens: TItensLiturgia;
+begin
+  if (listaLiturgia = nil) then
+    Exit;
+
+  SetLength(itens, lbLiturgia.Items.Count);
+  for i := 0 to lbLiturgia.Items.Count - 1 do
+    itens[i] := itemDaLiturgia(lbLiturgia.Items[i], i + 1);
+
+  listaLiturgia.bloqueado := cbBloqItens.Checked;
+  listaLiturgia.defineItens(itens);
+end;
+
+//Mantido com a assinatura antiga porque o fmLiturgia chama daqui de fora
+//(btAddClick, duas vezes). Com a lista desenhada nao ha item isolado para
+//remontar: redesenhar tudo e mais barato do que era remontar um painel.
+procedure TfmIndex.carregaItemLiturgia(item: string; ordem: integer);
+begin
+  desenhaLiturgia;
+end;
+
+//O seletor de cor do item. Serve ao quadrado de cor de qualquer item e ao
+//corpo da divisoria, que era o que o PanelColorClick e o ramo 'categoria' do
+//lit_modItem_textoClick faziam -- em dois lugares, com o mesmo codigo.
+procedure TfmIndex.escolheCorDoItemLiturgia(const item: string);
+begin
+  if (item = '') then
+    Exit;
+
+  try
+    DM.ColorDialog.Color := StringToColor(lerParam(item, 'cor', COR_PADRAO,
+      arq_liturgia));
+  except
+    DM.ColorDialog.Color := StringToColor(COR_PADRAO);
+  end;
+
+  if not DM.ColorDialog.Execute then
+    Exit;
+
+  gravaParam(item, 'cor', ColorToString(DM.ColorDialog.Color), arq_liturgia);
+  desenhaLiturgia;
+end;
+
+{ os eventos da lista }
+
+//OS EVENTOS SAO DA LISTA QUE OS DISPAROU, nao da variavel global: quem diz
+//o indice e o Sender. E o que permite a MESMA logica servir a lista da aba e
+//a do widget flutuante -- duas instancias do mesmo controle (regra 5c).
+//Antes isto lia `listaLiturgia` direto, e o widget exigiria uma copia da
+//tela inteira.
+procedure TfmIndex.litAbrirItem(Sender: TObject; indice: Integer);
+begin
+  //Tag 0 = o corpo do item, igual ao que o _texto fazia.
+  executaItemLiturgia(TListaLiturgia(Sender).identDoItem(indice), 0);
+end;
+
+procedure TfmIndex.litAcao(Sender: TObject; indice: Integer;
+  acao: TAcaoItem);
+begin
+  //Os Tags 1..6 sao os mesmos dos lit_modItem_icomus1..6 de antes, e o
+  //TagDaAcao e o do uMenuMusicas -- nao ha tabela nova.
+  executaItemLiturgia(TListaLiturgia(Sender).identDoItem(indice),
+    TagDaAcao(acao));
+end;
+
+procedure TfmIndex.litEditar(Sender: TObject; indice: Integer);
+begin
+  fIniciando.AppCreateForm(TfLiturgia, fLiturgia);
+  fLiturgia.Caption := 'Alterar Item';
+  fLiturgia.id := TListaLiturgia(Sender).identDoItem(indice);
+  fLiturgia.ShowModal;
+end;
+
+procedure TfmIndex.litCor(Sender: TObject; indice: Integer);
+begin
+  escolheCorDoItemLiturgia(TListaLiturgia(Sender).identDoItem(indice));
+end;
+
+procedure TfmIndex.litMarcar(Sender: TObject; indice: Integer;
+  marcado: Boolean);
+begin
+  marcaItemLiturgia(TListaLiturgia(Sender), indice, marcado);
+end;
+
+//Arrastou um item para outro lugar. O controle diz de onde para onde, em
+//indices -- antes a ordem nova era DEDUZIDA do Top de cada painel, ordenando
+//texto montado com FormatFloat.
+procedure TfmIndex.litMover(Sender: TObject; de, para: Integer);
+begin
+  if (de < 0) or (de >= lbLiturgia.Items.Count) then
+    Exit;
+  if (para < 0) or (para > lbLiturgia.Items.Count) then
+    Exit;
+
+  //'para' e posicao de INSERCAO: tirar o item antes de inserir desloca tudo
+  //que vinha depois dele.
+  if (para > de) then
+    Dec(para);
+  lbLiturgia.Items.Move(de, para);
+
+  salvaItensLiturgia;
+  desenhaLiturgia;
+
+  //Deixa selecionado o item onde ele caiu: solto sem realce, nao se ve para
+  //onde ele foi. A rolagem o defineItens ja preserva.
+  TListaLiturgia(Sender).indice := para;
 end;
 
 procedure TfmIndex.carregaLiturgia(semana: Integer);
 var
   itens: TStringList;
-  i: integer;
 begin
   garanteUtf8Liturgia;
+
   itens := TStringList.Create;
-  itens.Delimiter := ';';
-  itens.DelimitedText := lerParam('Geral', IntToStr(semana), '', arq_liturgia);
+  try
+    itens.Delimiter := ';';
+    itens.DelimitedText := lerParam('Geral', IntToStr(semana), '', arq_liturgia);
 
-  lbLiturgia.Items.Clear;
-  lbLiturgia.Items := itens;
-
-  for i := pred(sbLiturgia.ControlCount) downto 0 do
-  begin
-    if sbLiturgia.Controls[i].Visible
-      then sbLiturgia.Controls[i].Destroy;
+    lbLiturgia.Items.Clear;
+    //O Items := copia, entao a lista pode ser liberada. Antes ela NAO era:
+    //uma TStringList vazava por redesenho da tela.
+    lbLiturgia.Items := itens;
+  finally
+    itens.Free;
   end;
 
   if (lbLiturgia.Items.Count > 0) and
-    (trim(lbLiturgia.Items[lbLiturgia.Items.Count-1]) = '')
-    then lbLiturgia.Items.Delete(lbLiturgia.Items.Count-1);
+    (trim(lbLiturgia.Items[lbLiturgia.Items.Count - 1]) = '') then
+    lbLiturgia.Items.Delete(lbLiturgia.Items.Count - 1);
 
-  for i := 0 to lbLiturgia.Items.Count-1 do
-    carregaItemLiturgia(lbLiturgia.Items[i],i+1);
+  desenhaLiturgia;
 end;
+
 
 function TfmIndex.IsNumeric(S: string): boolean;
 var
@@ -7407,16 +7453,16 @@ begin
 end;
 
 procedure TfmIndex.apagaItemLiturgia(item: string);
-var
-  Panel: TPanel;
 begin
-  Panel := TPanel(FindComponent(item));
-  Panel.Visible := false;
-  apagaParam(item,'',arq_liturgia);
+  apagaParam(item, '', arq_liturgia);
   lbLiturgia.Items.Delete(lbLiturgia.Items.IndexOf(item));
 
   salvaItensLiturgia;
+  //Antes era Panel.Visible := false, e o painel ficava ali, invisivel,
+  //ate a proxima carga da tela.
+  desenhaLiturgia;
 end;
+
 
 procedure TfmIndex.apagaParam(Grupo, Param, Arquivo: string);
 var
@@ -7996,54 +8042,25 @@ begin
     abreLetraMusica('BD',txt,DM.qrBUSCA.FieldByName('ID').AsInteger,(TComponent(Sender).Tag) < 3);
 end;
 
-procedure TfmIndex.lit_modItem_bteditClick(Sender: TObject);
-begin
-  fIniciando.AppCreateForm(TfLiturgia, fLiturgia);
-  fLiturgia.Caption := 'Alterar Item';
-  fLiturgia.id := TPanel(Sender).Parent.Name;
-  fLiturgia.ShowModal;
-end;
-
-procedure TfmIndex.lit_modItem_checkbClick(Sender: TObject);
+//O corpo do antigo lit_modItem_textoClick, que era o despachante de tudo:
+//o Sender dizia QUAL item (pelo nome do painel) e o Tag dele dizia QUAL
+//acao. Agora os dois vem por parametro, e o corpo nao conhece controle --
+//mesma receita do expandirArea (secao 4k do CLAUDE.md).
+//
+//O tag e o mesmo de antes: 0 para o corpo do item, 1..6 para as seis
+//acoes de musica, na ordem dos lit_modItem_icomus1..6.
+procedure TfmIndex.executaItemLiturgia(const item: string; tag: Integer);
 var
-  Panel: TPanel;
-begin
-  Panel := TPanel(TPanel(Sender).Parent);
-
-  if TbsSkinCheckBox(Sender).Checked then
-  begin
-    gravaParam(Panel.Name, 'checked', FormatDateTime('dd/mm/yyyy',Now()), arq_liturgia);
-    TbsSkinStdLabel(FindComponent(Panel.Name+'_titulo')).Font.Style := [fsBold,fsStrikeOut];
-    TbsSkinStdLabel(FindComponent(Panel.Name+'_subtitulo')).Font.Style := [fsStrikeOut];
-    Panel.Color := $00CED5FF;
-  end
-  else
-  begin
-    gravaParam(Panel.Name, 'checked', '', arq_liturgia);
-    TbsSkinStdLabel(FindComponent(Panel.Name+'_titulo')).Font.Style := [fsBold];
-    TbsSkinStdLabel(FindComponent(Panel.Name+'_subtitulo')).Font.Style := [];
-    Panel.Color := clWhite;
-  end;
-end;
-
-procedure TfmIndex.lit_modItem_textoClick(Sender: TObject);
-var
-  Panel: TPanel;
-  item,subitem: string;
-  id,tag: Integer;
+  subitem: string;
+  id: Integer;
   txt:string;
 begin
-  if Sender is TbsSkinStdLabel
-    then Panel := TPanel(TPanel(Sender).Parent.Parent)
-    else Panel := TPanel(TPanel(Sender).Parent);
-  item := Panel.Name;
-  if (lerParam(item, 'tipo', '', arq_liturgia) = 'categoria') then
-  begin
-    DM.ColorDialog.Color := Panel.Color;
-    DM.ColorDialog.Execute;
-    Panel.Color := DM.ColorDialog.Color;
+  if (item = '') then
+    Exit;
 
-    gravaParam(item, 'cor', ColorToString(DM.ColorDialog.Color), arq_liturgia);
+  if EhDivisoria(lerParam(item, 'tipo', '', arq_liturgia)) then
+  begin
+    escolheCorDoItemLiturgia(item);
   end
   else if (lerParam(item, 'tipo', '', arq_liturgia) = 'musica') then
   begin
@@ -8057,8 +8074,6 @@ begin
     end
     else
       id := StrToInt('0'+lerParam(item, 'musica', '0', arq_liturgia));
-
-    tag := TComponent(Sender).Tag;
 
     if (tag = 4) then
       abreArquivoMusica(id)
@@ -8176,10 +8191,13 @@ begin
     DM.cdsItensAgendados.Filtered := true;
   end;
 
-  if (lerParam(item, 'tipo', '', arq_liturgia) <> 'categoria')
+  if not EhDivisoria(lerParam(item, 'tipo', '', arq_liturgia))
     and (cbMarcarConc.Checked) then
   begin
-    TbsSkinCheckBox(FindComponent(item+'_checkb')).Checked := True;
+    gravaParam(item, 'checked', FormatDateTime('dd/mm/yyyy', Now()),
+      arq_liturgia);
+    if (listaLiturgia <> nil) then
+      listaLiturgia.marcaItem(listaLiturgia.indiceDoIdent(item), True);
   end;
 end;
 
@@ -10873,83 +10891,6 @@ begin
   refreshCalendar();
 end;
 
-procedure TfmIndex.move_MouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-var
-  Panel: TPanel;
-  w: integer;
-begin
-  if Sender is TbsPngImageView
-    then Panel := TPanel(TPanel(Sender).Parent.Parent)
-    else Panel := TPanel(TPanel(Sender).Parent);
-
-  move_panel := TPanel.Create(Self);
-//  move_panel.Color := Panel.Color;
-
-  move_x := x;
-  move_y := y;
-  move := True;
-
-  Panel.BringToFront;
-  w := Panel.Width;
-  Panel.Align := alNone;
-  Panel.Width := w;
-  Panel.Color := $0085F8FE;
-  panel.DoubleBuffered := True;
-  sbLiturgia.DoubleBuffered := True;
-end;
-
-procedure TfmIndex.move_MouseMove(Sender: TObject; Shift: TShiftState;
-  X, Y: Integer);
-var
-  Panel: TPanel;
-begin
-  if Sender is TbsPngImageView
-    then Panel := TPanel(TPanel(Sender).Parent.Parent)
-    else Panel := TPanel(TPanel(Sender).Parent);
-
-  if move then
-  begin
-    Panel.Left := Panel.Left + (x - move_x);
-    Panel.Top := Panel.Top + (y - move_y);
-  end;
-end;
-
-procedure TfmIndex.move_MouseUp(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-var
-  Panel: TPanel;
-  i: integer;
-  itens: TStringList;
-begin
-  if Sender is TbsPngImageView
-    then Panel := TPanel(TPanel(Sender).Parent.Parent)
-    else Panel := TPanel(TPanel(Sender).Parent);
-
-  move := False;
-  Panel.Align := alTop;
-  Panel.Color := move_panel.Color;
-
-  move_panel.Free;
-  panel.DoubleBuffered := False;
-  sbLiturgia.DoubleBuffered := False;
-
-  itens := TStringList.Create;
-  for i := 0 to pred(sbLiturgia.ControlCount) do
-  begin
-    if sbLiturgia.Controls[i].Visible
-      then itens.Add(FormatFloat('000000000',(sbLiturgia.VScrollBar.RealClientHeight*100)+sbLiturgia.Controls[i].Top)+'|'+sbLiturgia.Controls[i].Name);
-  end;
-  itens.Sort;
-  lbLiturgiaPos.Items.Clear;
-  lbLiturgiaPos.Items := itens;
-  lbLiturgia.Items.Clear;
-  for i := 0 to itens.Count-1 do
-    lbLiturgia.Items.Add(Copy(itens[i], Pos('|',itens[i])+1, Length(itens[i])));
-
-  salvaItensLiturgia;
-end;
-
 procedure TfmIndex.ckVideoOnJanelaClick(Sender: TObject);
 begin
   if ckVideoOnJanela.Checked then
@@ -11097,6 +11038,8 @@ begin
     else btwsMaximized.ImageIndex := StrToInt('0'+layoutValue.Strings.Values['btMaximized']);
   btwsClose.ImageIndex := StrToInt('0'+layoutValue.Strings.Values['btClose']);
   btwsDownload.ImageIndex := StrToInt('0'+layoutValue.Strings.Values['btDownload']);
+
+  aplicaTemaDaInterface;
 end;
 
 procedure TfmIndex.rbDirecaoClick(Sender: TObject);
@@ -12294,69 +12237,84 @@ begin
   abrePagina(tsRelogio);
 end;
 
+//Marca ou desmarca um item: grava o parametro e redesenha. Ponto unico,
+//porque a selecao multipla tambem passa por aqui -- antes cada um desses
+//caminhos atribuia Checked no TbsSkinCheckBox do painel, e era o OnClick
+//disparado pela atribuicao (armadilha do BusinessSkinForm, secao 3 do
+//CLAUDE.md) que gravava o parametro de tabela.
+//RECEBE A LISTA, porque agora ha duas: a da aba e a do widget flutuante.
+//Antes isto lia a global, e era o unico ponto que gravava a marca -- o
+//litMarcar tinha uma copia do mesmo corpo, que saiu.
+procedure TfmIndex.marcaItemLiturgia(lista: TListaLiturgia;
+  indice: Integer; marcado: Boolean);
+var
+  item: string;
+begin
+  if (lista = nil) then
+    Exit;
+
+  item := lista.identDoItem(indice);
+  if (item = '') then
+    Exit;
+
+  if marcado then
+    gravaParam(item, 'checked', FormatDateTime('dd/mm/yyyy', Now()),
+      arq_liturgia)
+  else
+    gravaParam(item, 'checked', '', arq_liturgia);
+
+  lista.marcaItem(indice, marcado);
+end;
+
+//Marcar todos.
 procedure TfmIndex.bsSkinSpeedButton53Click(Sender: TObject);
 var
   i: integer;
-  item: string;
-  checkbox: TbsSkinCheckBox;
 begin
-  for i := lbLiturgia.Items.Count-1 downto 0 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item+'_checkb'));
-    if Assigned(checkbox)
-      then checkbox.Checked := True;
-  end;
+  for i := 0 to listaLiturgia.quantidade - 1 do
+    marcaItemLiturgia(listaLiturgia, i, True);
 end;
 
+//Desmarcar todos.
 procedure TfmIndex.bsSkinSpeedButton54Click(Sender: TObject);
 var
   i: integer;
-  item: string;
-  checkbox: TbsSkinCheckBox;
 begin
-  for i := lbLiturgia.Items.Count-1 downto 0 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item+'_checkb'));
-    if Assigned(checkbox)
-      then checkbox.Checked := False;
-  end;
+  for i := 0 to listaLiturgia.quantidade - 1 do
+    marcaItemLiturgia(listaLiturgia, i, False);
 end;
 
+//Inverter a marcacao.
 procedure TfmIndex.bsSkinSpeedButton55Click(Sender: TObject);
 var
   i: integer;
-  item: string;
-  checkbox: TbsSkinCheckBox;
 begin
-  for i := lbLiturgia.Items.Count-1 downto 0 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item+'_checkb'));
-    if Assigned(checkbox)
-      then checkbox.Checked := not checkbox.Checked;
-  end;
+  for i := 0 to listaLiturgia.quantidade - 1 do
+    marcaItemLiturgia(listaLiturgia, i,
+      not listaLiturgia.itemMarcado(i));
 end;
 
 procedure TfmIndex.btApagaLitSelClick(Sender: TObject);
 var
   i: integer;
-  item: string;
-  checkbox: TbsSkinCheckBox;
+  marcados: TStringList;
 begin
   if application.messagebox(PChar('Deseja realmente apagar todos os itens marcados?'), TITULO, mb_yesno + mb_iconquestion) <> 6 then
     Exit;
 
-  for i := lbLiturgia.Items.Count-1 downto 0 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item+'_checkb'));
-    if Assigned(checkbox) then
-    begin
-      if checkbox.Checked
-        then apagaItemLiturgia(item);
-    end;
+  //Os identificadores sao recolhidos ANTES de apagar: o apagaItemLiturgia
+  //remonta a lista, e um laco por indice andaria sobre uma lista que muda
+  //debaixo dele.
+  marcados := TStringList.Create;
+  try
+    for i := 0 to listaLiturgia.quantidade - 1 do
+      if listaLiturgia.itemMarcado(i) then
+        marcados.Add(listaLiturgia.identDoItem(i));
+
+    for i := 0 to marcados.Count - 1 do
+      apagaItemLiturgia(marcados[i]);
+  finally
+    marcados.Free;
   end;
 end;
 
@@ -12364,7 +12322,6 @@ procedure TfmIndex.btCopiaLitSelClick(Sender: TObject);
 var
   i, k, dia: Integer;
   item, novoId, semanaStr: string;
-  checkbox: TbsSkinCheckBox;
   dlg: TfCopiaLiturgiaDia;
   diaOrigem: Integer;
   diasDestino: TArray<Integer>;
@@ -12381,13 +12338,9 @@ var
   end;
 begin
   FLitClipboard.Clear;
-  for i := 0 to lbLiturgia.Items.Count - 1 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item + '_checkb'));
-    if Assigned(checkbox) and checkbox.Checked then
-      FLitClipboard.Add(item);
-  end;
+  for i := 0 to listaLiturgia.quantidade - 1 do
+    if listaLiturgia.itemMarcado(i) then
+      FLitClipboard.Add(listaLiturgia.identDoItem(i));
 
   if FLitClipboard.Count = 0 then
   begin

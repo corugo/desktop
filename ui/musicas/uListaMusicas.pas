@@ -57,15 +57,10 @@ const
   LARG_BARRA = 10;
   MIN_POLEGAR = 32;
 
-  //Indices no DM.ico_24x24, os mesmos que o fmListaMusica.dfm usava em cada
-  //TbsPngImageView. Ficam aqui, nomeados, em vez de espalhados pelo .dfm.
-  ICONE_ITEM = 74;            //o icone da coluna da esquerda
-  ICONE_SLIDE_CANTADO = 76;   //Tag 1
-  ICONE_SLIDE_PLAYBACK = 82;  //Tag 2
-  ICONE_SLIDE_SEM_AUDIO = 77; //Tag 3
-  ICONE_AUDIO_CANTADO = 75;   //Tag 4
-  ICONE_AUDIO_PLAYBACK = 35;  //Tag 5
-  ICONE_LETRA = 63;           //Tag 6
+  //Os indices dos icones das acoes mudaram para o uMenuMusicas: a liturgia
+  //desenha a mesma faixa de seis, e indice repetido em dois lugares e
+  //fazenda de bug. O ICONE_ITEM nao foi com eles porque nao e acao -- e
+  //estava morto, sem nenhum uso, desde a primeira versao desta unit.
 
 type
   TEventoAcao = procedure(Sender: TObject; indice: Integer;
@@ -158,23 +153,8 @@ type
 //Qual glifo e qual icone desenham cada acao. Ficam aqui e nao no uMenuMusicas
 //porque aquela unit e pura e nao conhece nem o tema nem a lista de imagens.
 function GlifoDaAcao(acao: TAcaoItem): TGlifo;
-function IconeDaAcao(acao: TAcaoItem): Integer;
 
 implementation
-
-function IconeDaAcao(acao: TAcaoItem): Integer;
-begin
-  case acao of
-    acSlideCantado: Result := ICONE_SLIDE_CANTADO;
-    acSlidePlayback: Result := ICONE_SLIDE_PLAYBACK;
-    acSlideSemAudio: Result := ICONE_SLIDE_SEM_AUDIO;
-    acAudioCantado: Result := ICONE_AUDIO_CANTADO;
-    acAudioPlayback: Result := ICONE_AUDIO_PLAYBACK;
-    acLetra: Result := ICONE_LETRA;
-  else
-    Result := -1;
-  end;
-end;
 
 function GlifoDaAcao(acao: TAcaoItem): TGlifo;
 begin

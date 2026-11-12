@@ -29,7 +29,8 @@
 interface
 
 uses
-  System.Classes, System.SysUtils, System.Types, Vcl.Graphics, Vcl.ImgList;
+  System.Classes, System.SysUtils, System.Types, System.UITypes,
+  Vcl.Graphics, Vcl.ImgList;
 
 const
   //Quanto do icone SOBRA num botao apagado, em porcentagem -- o resto e a cor
@@ -111,6 +112,14 @@ function CorRGB(r, g, b: Byte): TColor;
 //de uma tabela para cada caso.
 function Mistura(a, b: TColor; pesoB: Integer): TColor;
 
+//Esta cor e escura? Luminancia, com os pesos de sempre (30/59/11).
+function CorEscura(c: TColor): Boolean;
+
+//Branco ou quase-preto, o que tiver contraste SOBRE a cor dada. Serve para
+//texto escrito em cima de cor que o USUARIO escolheu -- a do bloco da
+//liturgia, por exemplo -- e que portanto pode ser qualquer uma.
+function CorDeTextoSobre(c: TColor): TColor;
+
 //O tema atual e escuro? Decidido pela luminancia do fundo. Quem precisa saber
 //e quem pinta algo FORA do nosso desenho, como a barra de titulo do sistema.
 function TemaEscuro: Boolean;
@@ -151,7 +160,7 @@ procedure DesenhaIcone(cv: TCanvas; const r: TRect; lista: TCustomImageList;
   habilitado: Boolean = True; fundo: TColor = clNone);
 
 procedure PreparaFonte(cv: TCanvas; altura: Integer; negrito: Boolean;
-  cor: TColor);
+  cor: TColor; riscado: Boolean = False);
 
 //Texto de uma linha, centrado na vertical, com reticencias quando nao couber.
 //
@@ -185,14 +194,26 @@ begin
     (((a shr 16) and $FF) * pa + ((b shr 16) and $FF) * pesoB) div 100);
 end;
 
-function TemaEscuro: Boolean;
-var
-  c: TColor;
+function CorEscura(c: TColor): Boolean;
 begin
-  c := COR_FUNDO;
-  //Luminancia aproximada, com os pesos de sempre (30/59/11).
+  //Luminancia aproximada, com os pesos de sempre (30/59/11). O TColor e
+  //$00BBGGRR, entao o vermelho esta no byte BAIXO.
   Result := ((c and $FF) * 30 + ((c shr 8) and $FF) * 59 +
              ((c shr 16) and $FF) * 11) div 100 < 128;
+end;
+
+function CorDeTextoSobre(c: TColor): TColor;
+begin
+  //Quase-preto, e nao preto: sobre cor clara o preto puro fica duro.
+  if CorEscura(c) then
+    Result := TColor($00FFFFFF)
+  else
+    Result := TColor($00202020);
+end;
+
+function TemaEscuro: Boolean;
+begin
+  Result := CorEscura(COR_FUNDO);
 end;
 
 procedure AplicaPaleta(fundo, item, texto, selecao, textoSelecao, sombra,
@@ -332,17 +353,20 @@ begin
 end;
 
 procedure PreparaFonte(cv: TCanvas; altura: Integer; negrito: Boolean;
-  cor: TColor);
+  cor: TColor; riscado: Boolean);
 begin
   cv.Font.Name := FONTE_UI;
   //Negativo = altura do caractere, nos dois frameworks. Positivo seria a
   //altura da celula, que e o que o .dfm antigo usa -- e por isso rende letra
   //menor do que o numero sugere.
   cv.Font.Height := -altura;
+  //O riscado e o item de liturgia ja realizado: era [fsBold, fsStrikeOut]
+  //no TbsSkinStdLabel. fsStrikeOut existe igual no LCL.
+  cv.Font.Style := [];
   if negrito then
-    cv.Font.Style := [fsBold]
-  else
-    cv.Font.Style := [];
+    cv.Font.Style := cv.Font.Style + [fsBold];
+  if riscado then
+    cv.Font.Style := cv.Font.Style + [fsStrikeOut];
   cv.Font.Color := cor;
   cv.Brush.Style := bsClear;
 end;

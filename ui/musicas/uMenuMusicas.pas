@@ -55,6 +55,19 @@ const
   TIPO_ACERVO = 0;
   TIPO_ARQUIVO = 1;
 
+  //Indices no DM.ico_24x24. Estavam no uListaMusicas, que e o controle da
+  //lista do operador -- mudaram para ca quando apareceu o SEGUNDO consumidor:
+  //o item de musica da LITURGIA desenha a mesma faixa de seis acoes, com os
+  //mesmos seis icones e a mesma condicional de playback (conferido byte a
+  //byte contra os lit_modItem_icomus1..6 do fmMenu.dfm). Indice de icone
+  //repetido em dois lugares e fazenda de bug: quando um muda, o outro fica.
+  ICONE_SLIDE_CANTADO = 76;   //Tag 1
+  ICONE_SLIDE_PLAYBACK = 82;  //Tag 2
+  ICONE_SLIDE_SEM_AUDIO = 77; //Tag 3
+  ICONE_AUDIO_CANTADO = 75;   //Tag 4
+  ICONE_AUDIO_PLAYBACK = 35;  //Tag 5
+  ICONE_LETRA = 63;           //Tag 6
+
 //Tag do fmListaMusica <-> acao. A ida aceita qualquer inteiro, porque o Tag
 //vem de componente e pode ser qualquer coisa.
 function AcaoDoTag(tag: Integer; out acao: TAcaoItem): Boolean;
@@ -63,6 +76,10 @@ function TagDaAcao(acao: TAcaoItem): Integer;
 function NomeDaAcao(acao: TAcaoItem): string;
 function NomeDaAcaoApagada(acao: TAcaoItem): string;
 function ContaAcoes(const acoes: TAcoesItem): Integer;
+
+//O icone de cada acao. Fica aqui, e nao no controle que desenha, porque sao
+//duas listas desenhando a mesma faixa. Devolve -1 para acao sem icone.
+function IconeDaAcao(acao: TAcaoItem): Integer;
 
 //Decide quais botoes um item do ACERVO oferece, com a mesma regra do
 //DBCtrlGridPaintPanel de hoje: no acervo tudo existe, menos o playback, que
@@ -189,6 +206,21 @@ begin
     Result := '';
   end;
 end;
+
+function IconeDaAcao(acao: TAcaoItem): Integer;
+begin
+  case acao of
+    acSlideCantado: Result := ICONE_SLIDE_CANTADO;
+    acSlidePlayback: Result := ICONE_SLIDE_PLAYBACK;
+    acSlideSemAudio: Result := ICONE_SLIDE_SEM_AUDIO;
+    acAudioCantado: Result := ICONE_AUDIO_CANTADO;
+    acAudioPlayback: Result := ICONE_AUDIO_PLAYBACK;
+    acLetra: Result := ICONE_LETRA;
+  else
+    Result := -1;
+  end;
+end;
+
 
 function ContaAcoes(const acoes: TAcoesItem): Integer;
 var

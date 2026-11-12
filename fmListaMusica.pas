@@ -174,16 +174,7 @@ begin
   //
   //É o único ponto do código novo que toca no BusinessSkinForm, e toca só para
   //ler números: o uTema continua sem conhecê-lo.
-  if (DM <> nil) and (DM.bsSkinData1 <> nil) and
-     (DM.bsSkinData1.SkinColors <> nil) then
-    AplicaPaleta(
-      DM.bsSkinData1.SkinColors.cBtnFace,        //fundo do cabeçalho
-      DM.bsSkinData1.SkinColors.cWindow,         //fundo de cada item
-      DM.bsSkinData1.SkinColors.cWindowText,     //texto
-      DM.bsSkinData1.SkinColors.cHighLight,      //linha selecionada
-      DM.bsSkinData1.SkinColors.cHighLightText,  //texto dentro dela
-      DM.bsSkinData1.SkinColors.cBtnShadow,      //separador e trilho
-      DM.bsSkinData1.SkinColors.cHighLight);     //barra do item projetado
+  fmIndex.aplicaTemaDaInterface;
 
   Color := COR_FUNDO;
   Font.Name := FONTE_UI;
