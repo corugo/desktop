@@ -694,10 +694,30 @@ begin
     Exit;
   end;
 
-  //Só o realce dos dois botões e do polegar interessa: trilho não acende.
+  //A barra é opaca para o mouse, como já era para o clique: o MouseDown sai
+  //em qualquer zona dela. Sem esta saída o item de trás acendia, porque o
+  //itemEm() olha só o Y e não sabe que a barra está na frente.
   novaZona := b.zonaEm(Point(X, Y));
-  if not (novaZona in [zbSobe, zbDesce, zbPolegar]) then
-    novaZona := zbNada;
+  if (novaZona <> zbNada) then
+  begin
+    //Só o realce dos dois botões e do polegar interessa: trilho não acende.
+    if not (novaZona in [zbSobe, zbDesce, zbPolegar]) then
+      novaZona := zbNada;
+
+    //Aqui não há o que clicar no conteúdo, então a mão sai.
+    if (Cursor <> crArrow) then
+      Cursor := crArrow;
+    poeDica('');
+
+    if (FItemSob <> -1) or (FAcaoSob <> -1) or (novaZona <> FZonaSob) then
+    begin
+      FItemSob := -1;
+      FAcaoSob := -1;
+      FZonaSob := novaZona;
+      Invalidate;
+    end;
+    Exit;
+  end;
 
   novoItem := itemEm(Y);
   if acaoEm(Point(X, Y), it, slot, ac) then
@@ -749,6 +769,17 @@ begin
   begin
     FArrastando := False;
     Invalidate;
+    inherited;
+    Exit;
+  end;
+
+  //Soltar sobre a barra nao aciona o que esta atras dela, pela mesma razao
+  //do MouseMove: ela esta na frente. Antes, apertar no item e soltar em
+  //cima da barra, no mesmo Y, abria a musica.
+  if (barra.zonaEm(Point(X, Y)) <> zbNada) then
+  begin
+    FItemPreso := -1;
+    FAcaoPresa := -1;
     inherited;
     Exit;
   end;
