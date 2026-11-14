@@ -46,6 +46,7 @@ uses
   uArquivosWeb in 'uArquivosWeb.pas',
   uTema in 'ui\uTema.pas',
   uControles in 'ui\uControles.pas',
+  uBarraRolagem in 'ui\uBarraRolagem.pas',
   uJanela in 'ui\uJanela.pas',
   uMenuMusicas in 'ui\musicas\uMenuMusicas.pas',
   uListaMusicas in 'ui\musicas\uListaMusicas.pas',

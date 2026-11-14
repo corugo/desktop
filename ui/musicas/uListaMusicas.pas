@@ -29,8 +29,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, System.Math,
-  Vcl.Graphics, Vcl.Controls, Vcl.ImgList, Vcl.Forms,
-  uTema, uMenuMusicas;
+  Vcl.Graphics, Vcl.Controls, Vcl.ImgList, Vcl.Forms, Vcl.ExtCtrls,
+  uTema, uBarraRolagem, uMenuMusicas;
 
 const
   //Medidas tiradas do fmListaMusica.dfm atual. CUIDADO: o PanelHeight = 66
@@ -54,8 +54,14 @@ const
   //largura minima da janela.
   LARG_MIN_NOME = 130;
 
-  LARG_BARRA = 10;
-  MIN_POLEGAR = 32;
+  //LARG_BARRA e MIN_POLEGAR saíram para o uBarraRolagem: a liturgia desenha
+  //a mesma barra, e medida repetida em dois lugares é fazenda de bug.
+
+  //De quanto em quanto o botão da ponta rola, e o ritmo da repetição
+  //enquanto ele fica apertado.
+  PASSO_BOTAO = PASSO_ITEM;
+  MS_PRIMEIRA_REPETICAO = 400;
+  MS_REPETICAO = 60;
 
   //Os indices dos icones das acoes mudaram para o uMenuMusicas: a liturgia
   //desenha a mesma faixa de seis, e indice repetido em dois lugares e
@@ -81,7 +87,9 @@ type
     FArrastando: Boolean;
     FArrasteY: Integer;
     FArrasteTopo: Integer;
-    FPolegarSob: Boolean;
+    FZonaSob: TZonaBarra;     //zona da barra sob o mouse
+    FZonaPresa: TZonaBarra;   //botão da barra que está apertado
+    FTimerBarra: TTimer;      //repete enquanto o botão fica apertado
     FImagens: TCustomImageList;
     FOnRolou: TNotifyEvent;
     FOnAcao: TEventoAcao;
@@ -103,10 +111,10 @@ type
     procedure poeDica(const texto: string);
     function acaoEm(const p: TPoint; out item, slot: Integer;
       out acao: TAcaoItem): Boolean;
-    function alturaPolegar: Integer;
-    function retanguloPolegar: TRect;
+    function barra: TBarraRolagem;
+    procedure aoTicarBarra(Sender: TObject);
+    procedure passoDaBarra(zona: TZonaBarra);
     procedure desenhaItem(cv: TCanvas; i: Integer);
-    procedure desenhaBarra(cv: TCanvas);
     procedure poeProjetando(v: Integer);
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
   protected
@@ -180,6 +188,16 @@ begin
   FAcaoSob := -1;
   FItemPreso := -1;
   FAcaoPresa := -1;
+  FZonaSob := zbNada;
+  FZonaPresa := zbNada;
+
+  //Segurar o botao da ponta rola sem parar. Sem isto so o clique conta, e
+  //atravessar uma lista grande sairia a um clique por linha.
+  FTimerBarra := TTimer.Create(Self);
+  FTimerBarra.Enabled := False;
+  FTimerBarra.Interval := MS_PRIMEIRA_REPETICAO;
+  FTimerBarra.OnTimer := aoTicarBarra;
+
   //O form atual usa crHandPoint em tudo: o item inteiro e clicavel.
   Cursor := crHandPoint;
   TabStop := True;
@@ -430,42 +448,47 @@ begin
   Application.CancelHint;
 end;
 
-function TListaMusicas.alturaPolegar: Integer;
+//A geometria da barra para o estado de agora. E valor, recalculado a cada
+//uso: guardar em campo daria uma copia a mais para manter em dia a cada
+//rolagem, redimensionamento ou troca de conteudo.
+function TListaMusicas.barra: TBarraRolagem;
 begin
-  Result := (ClientHeight * ClientHeight) div Max(1, alturaTotal);
-  if (Result < MIN_POLEGAR) then
-    Result := MIN_POLEGAR;
-  if (Result > ClientHeight) then
-    Result := ClientHeight;
+  Result := MontaBarra(ClientWidth, ClientHeight, alturaTotal,
+                       FTopo, topoMaximo);
 end;
 
-function TListaMusicas.retanguloPolegar: TRect;
-var
-  h, y: Integer;
+procedure TListaMusicas.passoDaBarra(zona: TZonaBarra);
 begin
-  h := alturaPolegar;
-  y := 0;
-  if (topoMaximo > 0) then
-    y := ((ClientHeight - h) * FTopo) div topoMaximo;
-  Result := Rect(ClientWidth - LARG_BARRA, y, ClientWidth, y + h);
+  case zona of
+    zbSobe:         poeTopo(FTopo - PASSO_BOTAO);
+    zbDesce:        poeTopo(FTopo + PASSO_BOTAO);
+    zbPaginaAcima:  poeTopo(FTopo - ClientHeight);
+    zbPaginaAbaixo: poeTopo(FTopo + ClientHeight);
+  end;
+  Invalidate;
 end;
 
-procedure TListaMusicas.desenhaBarra(cv: TCanvas);
-var
-  rp: TRect;
+procedure TListaMusicas.aoTicarBarra(Sender: TObject);
 begin
-  cv.Brush.Style := bsSolid;
-  cv.Brush.Color := COR_TRILHO;
-  cv.FillRect(Rect(ClientWidth - LARG_BARRA, 0, ClientWidth, ClientHeight));
+  //O primeiro tique e o mais lento (MS_PRIMEIRA_REPETICAO): da tempo de
+  //soltar depois de um clique simples sem a lista disparar.
+  FTimerBarra.Interval := MS_REPETICAO;
 
-  rp := retanguloPolegar;
-  cv.Pen.Style := psClear;
-  if FPolegarSob or FArrastando then
-    cv.Brush.Color := COR_POLEGAR_SOB
-  else
-    cv.Brush.Color := COR_POLEGAR;
-  cv.RoundRect(rp.Left + 2, rp.Top + 2, rp.Right - 2, rp.Bottom - 2, 6, 6);
-  cv.Pen.Style := psSolid;
+  if (FZonaPresa = zbNada) then
+  begin
+    FTimerBarra.Enabled := False;
+    Exit;
+  end;
+
+  //Chegou na ponta: parar de repetir em vez de girar a toa.
+  if ((FZonaPresa = zbSobe) and (FTopo <= 0)) or
+     ((FZonaPresa = zbDesce) and (FTopo >= topoMaximo)) then
+  begin
+    FTimerBarra.Enabled := False;
+    Exit;
+  end;
+
+  passoDaBarra(FZonaPresa);
 end;
 
 procedure TListaMusicas.desenhaItem(cv: TCanvas; i: Integer);
@@ -586,8 +609,7 @@ begin
   for i := pri to ult do
     desenhaItem(Canvas, i);
 
-  if temBarra then
-    desenhaBarra(Canvas);
+  DesenhaBarra(Canvas, barra, FZonaSob, FArrastando);
 end;
 
 procedure TListaMusicas.MouseDown(Button: TMouseButton; Shift: TShiftState;
@@ -596,6 +618,7 @@ var
   it, slot: Integer;
   ac: TAcaoItem;
   p: TPoint;
+  zona: TZonaBarra;
 begin
   inherited;
 
@@ -604,18 +627,24 @@ begin
 
   p := Point(X, Y);
 
-  if temBarra and (X >= ClientWidth - LARG_BARRA) then
+  zona := barra.zonaEm(p);
+  if (zona <> zbNada) then
   begin
-    if PtInRect(retanguloPolegar, p) then
+    if (zona = zbPolegar) then
     begin
       FArrastando := True;
       FArrasteY := Y;
       FArrasteTopo := FTopo;
     end
-    else if (Y < retanguloPolegar.Top) then
-      poeTopo(FTopo - ClientHeight)
     else
-      poeTopo(FTopo + ClientHeight);
+    begin
+      //O passo sai na hora; a repeticao so comeca se o botao continuar
+      //apertado depois da primeira espera.
+      FZonaPresa := zona;
+      passoDaBarra(zona);
+      FTimerBarra.Interval := MS_PRIMEIRA_REPETICAO;
+      FTimerBarra.Enabled := True;
+    end;
     Invalidate;
     Exit;
   end;
@@ -651,20 +680,24 @@ procedure TListaMusicas.MouseMove(Shift: TShiftState; X, Y: Integer);
 var
   it, slot, novoItem, novaAcao: Integer;
   ac, acApagada: TAcaoItem;
-  faixa: Integer;
-  sobPolegar, apagado: Boolean;
+  b: TBarraRolagem;
+  novaZona: TZonaBarra;
+  apagado: Boolean;
 begin
   inherited;
 
+  b := barra;
+
   if FArrastando then
   begin
-    faixa := ClientHeight - alturaPolegar;
-    if (faixa > 0) then
-      poeTopo(FArrasteTopo + ((Y - FArrasteY) * topoMaximo) div faixa);
+    poeTopo(b.topoDoArraste(Y, FArrasteY, FArrasteTopo, topoMaximo));
     Exit;
   end;
 
-  sobPolegar := temBarra and PtInRect(retanguloPolegar, Point(X, Y));
+  //Só o realce dos dois botões e do polegar interessa: trilho não acende.
+  novaZona := b.zonaEm(Point(X, Y));
+  if not (novaZona in [zbSobe, zbDesce, zbPolegar]) then
+    novaZona := zbNada;
 
   novoItem := itemEm(Y);
   if acaoEm(Point(X, Y), it, slot, ac) then
@@ -692,11 +725,11 @@ begin
     poeDica('');
 
   if (novoItem <> FItemSob) or (novaAcao <> FAcaoSob) or
-     (sobPolegar <> FPolegarSob) then
+     (novaZona <> FZonaSob) then
   begin
     FItemSob := novoItem;
     FAcaoSob := novaAcao;
-    FPolegarSob := sobPolegar;
+    FZonaSob := novaZona;
     Invalidate;
   end;
 end;
@@ -708,6 +741,10 @@ var
   ac: TAcaoItem;
   mesmoAlvo: Boolean;
 begin
+  //Soltar o botao sempre encerra a repeticao da barra, venha de onde vier.
+  FTimerBarra.Enabled := False;
+  FZonaPresa := zbNada;
+
   if FArrastando then
   begin
     FArrastando := False;
@@ -748,11 +785,11 @@ procedure TListaMusicas.CMMouseLeave(var Message: TMessage);
 begin
   inherited;
   poeDica('');
-  if (FItemSob <> -1) or (FAcaoSob <> -1) or FPolegarSob then
+  if (FItemSob <> -1) or (FAcaoSob <> -1) or (FZonaSob <> zbNada) then
   begin
     FItemSob := -1;
     FAcaoSob := -1;
-    FPolegarSob := False;
+    FZonaSob := zbNada;
     Invalidate;
   end;
 end;

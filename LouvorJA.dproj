@@ -249,6 +249,7 @@
         <DCCReference Include="uArquivosWeb.pas"/>
         <DCCReference Include="ui\uTema.pas"/>
         <DCCReference Include="ui\uControles.pas"/>
+        <DCCReference Include="ui\uBarraRolagem.pas"/>
         <DCCReference Include="ui\uJanela.pas"/>
         <DCCReference Include="ui\musicas\uMenuMusicas.pas"/>
         <DCCReference Include="ui\musicas\uListaMusicas.pas"/>

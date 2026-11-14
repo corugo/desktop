@@ -48,7 +48,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
   System.Types, System.Math,
   Vcl.Graphics, Vcl.Controls, Vcl.ImgList, Vcl.Forms, Vcl.ExtCtrls,
-  uTema, uMenuMusicas, uListaMusicas, uItensLiturgia;
+  uTema, uBarraRolagem, uMenuMusicas, uListaMusicas, uItensLiturgia;
 
 const
   //Medidas das colunas, da esquerda para a direita. No .dfm de hoje elas sao
@@ -63,8 +63,14 @@ const
   //Abaixo disto o texto do item nao vale a pena: entra na largura minima.
   LARG_MIN_TEXTO = 150;
 
-  LARG_BARRA  = 10;
-  MIN_POLEGAR = 32;
+  //LARG_BARRA e MIN_POLEGAR saíram para o uBarraRolagem: o menu de músicas
+  //desenha a mesma barra, e medida repetida em dois lugares é fazenda de bug.
+
+  //De quanto em quanto o botão da ponta rola, e o ritmo da repetição
+  //enquanto ele fica apertado.
+  PASSO_BOTAO = 40;
+  MS_PRIMEIRA_REPETICAO = 400;
+  MS_REPETICAO = 60;
 
   //A barra na borda esquerda do item que esta sendo reproduzido.
   LARG_BARRA_NO_AR = 3;
@@ -118,7 +124,12 @@ type
     FRolando: Boolean;
     FRolaY: Integer;
     FRolaTopo: Integer;
-    FPolegarSob: Boolean;
+    FZonaBarraSob: TZonaBarra;     //zona da barra sob o mouse
+    FZonaBarraPresa: TZonaBarra;   //botão da barra que está apertado
+    //Temporizador PRÓPRIO, separado do FTimerRolagem: aquele é da
+    //auto-rolagem do arraste de item e tem a guarda FMovendo. Um só para os
+    //dois significaria um desligar o do outro no meio do caminho.
+    FTimerBarra: TTimer;
 
     //Arraste de reordenacao.
     FMovendo: Boolean;
@@ -166,8 +177,9 @@ type
     function slotApagadoEm(const p: TPoint; out acao: TAcaoItem): Boolean;
     procedure poeDica(const texto: string);
 
-    function alturaPolegar: Integer;
-    function retanguloPolegar: TRect;
+    function barra: TBarraRolagem;
+    procedure aoTicarBarra(Sender: TObject);
+    procedure passoDaBarra(zona: TZonaBarra);
     function alvoDeInsercao(y: Integer): Integer;
     function passoDaAutoRolagem(y: Integer): Integer;
     procedure aoTicarAutoRolagem(Sender: TObject);
@@ -178,7 +190,6 @@ type
     procedure desenhaAlca(cv: TCanvas; const r: TRect;
       fundo: TColor; sob: Boolean);
     procedure desenhaCheck(cv: TCanvas; const r: TRect; marcado, sob: Boolean);
-    procedure desenhaBarra(cv: TCanvas);
     procedure desenhaMarcaDeInsercao(cv: TCanvas);
     function corDoItem(i: Integer): TColor;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
@@ -253,6 +264,8 @@ begin
   FAcaoPresa := -1;
   FMoveDe := -1;
   FMoveAlvo := -1;
+  FZonaBarraSob := zbNada;
+  FZonaBarraPresa := zbNada;
   Cursor := crHandPoint;
   TabStop := True;
   //A legenda muda conforme a zona sob o cursor, entao nao ha Hint fixo. O
@@ -269,6 +282,13 @@ begin
   FTimerRolagem.Enabled := False;
   FTimerRolagem.Interval := MS_AUTOROLAGEM;
   FTimerRolagem.OnTimer := aoTicarAutoRolagem;
+
+  //Segurar o botao da ponta rola sem parar. Sem isto so o clique conta, e
+  //atravessar uma liturgia grande sairia a um clique por linha.
+  FTimerBarra := TTimer.Create(Self);
+  FTimerBarra.Enabled := False;
+  FTimerBarra.Interval := MS_PRIMEIRA_REPETICAO;
+  FTimerBarra.OnTimer := aoTicarBarra;
 end;
 
 procedure TListaLiturgia.recalcula;
@@ -666,42 +686,47 @@ end;
 
 { barra de rolagem }
 
-function TListaLiturgia.alturaPolegar: Integer;
+//A geometria da barra para o estado de agora. E valor, recalculado a cada
+//uso: guardar em campo daria uma copia a mais para manter em dia a cada
+//rolagem, redimensionamento ou troca de conteudo.
+function TListaLiturgia.barra: TBarraRolagem;
 begin
-  Result := (ClientHeight * ClientHeight) div Max(1, FAlturaTotal);
-  if (Result < MIN_POLEGAR) then
-    Result := MIN_POLEGAR;
-  if (Result > ClientHeight) then
-    Result := ClientHeight;
+  Result := MontaBarra(ClientWidth, ClientHeight, FAlturaTotal,
+                       FTopo, topoMaximo);
 end;
 
-function TListaLiturgia.retanguloPolegar: TRect;
-var
-  h, y: Integer;
+procedure TListaLiturgia.passoDaBarra(zona: TZonaBarra);
 begin
-  h := alturaPolegar;
-  y := 0;
-  if (topoMaximo > 0) then
-    y := ((ClientHeight - h) * FTopo) div topoMaximo;
-  Result := Rect(ClientWidth - LARG_BARRA, y, ClientWidth, y + h);
+  case zona of
+    zbSobe:         poeTopo(FTopo - PASSO_BOTAO);
+    zbDesce:        poeTopo(FTopo + PASSO_BOTAO);
+    zbPaginaAcima:  poeTopo(FTopo - ClientHeight);
+    zbPaginaAbaixo: poeTopo(FTopo + ClientHeight);
+  end;
+  Invalidate;
 end;
 
-procedure TListaLiturgia.desenhaBarra(cv: TCanvas);
-var
-  rp: TRect;
+procedure TListaLiturgia.aoTicarBarra(Sender: TObject);
 begin
-  cv.Brush.Style := bsSolid;
-  cv.Brush.Color := COR_TRILHO;
-  cv.FillRect(Rect(ClientWidth - LARG_BARRA, 0, ClientWidth, ClientHeight));
+  //O primeiro tique e o mais lento (MS_PRIMEIRA_REPETICAO): da tempo de
+  //soltar depois de um clique simples sem a lista disparar.
+  FTimerBarra.Interval := MS_REPETICAO;
 
-  rp := retanguloPolegar;
-  cv.Pen.Style := psClear;
-  if FPolegarSob or FRolando then
-    cv.Brush.Color := COR_POLEGAR_SOB
-  else
-    cv.Brush.Color := COR_POLEGAR;
-  cv.RoundRect(rp.Left + 2, rp.Top + 2, rp.Right - 2, rp.Bottom - 2, 6, 6);
-  cv.Pen.Style := psSolid;
+  if (FZonaBarraPresa = zbNada) then
+  begin
+    FTimerBarra.Enabled := False;
+    Exit;
+  end;
+
+  //Chegou na ponta: parar de repetir em vez de girar a toa.
+  if ((FZonaBarraPresa = zbSobe) and (FTopo <= 0)) or
+     ((FZonaBarraPresa = zbDesce) and (FTopo >= topoMaximo)) then
+  begin
+    FTimerBarra.Enabled := False;
+    Exit;
+  end;
+
+  passoDaBarra(FZonaBarraPresa);
 end;
 
 { reordenacao }
@@ -1164,8 +1189,7 @@ begin
   if FMovendo then
     desenhaMarcaDeInsercao(Canvas);
 
-  if temBarra then
-    desenhaBarra(Canvas);
+  DesenhaBarra(Canvas, barra, FZonaBarraSob, FRolando);
 end;
 
 { mouse }
@@ -1177,6 +1201,7 @@ var
   ac: TAcaoItem;
   z: TZonaLit;
   p: TPoint;
+  zb: TZonaBarra;
 begin
   inherited;
 
@@ -1185,18 +1210,24 @@ begin
 
   p := Point(X, Y);
 
-  if temBarra and (X >= ClientWidth - LARG_BARRA) then
+  zb := barra.zonaEm(p);
+  if (zb <> zbNada) then
   begin
-    if PtInRect(retanguloPolegar, p) then
+    if (zb = zbPolegar) then
     begin
       FRolando := True;
       FRolaY := Y;
       FRolaTopo := FTopo;
     end
-    else if (Y < retanguloPolegar.Top) then
-      poeTopo(FTopo - ClientHeight)
     else
-      poeTopo(FTopo + ClientHeight);
+    begin
+      //O passo sai na hora; a repeticao so comeca se o botao continuar
+      //apertado depois da primeira espera.
+      FZonaBarraPresa := zb;
+      passoDaBarra(zb);
+      FTimerBarra.Interval := MS_PRIMEIRA_REPETICAO;
+      FTimerBarra.Enabled := True;
+    end;
     Invalidate;
     Exit;
   end;
@@ -1236,18 +1267,20 @@ end;
 
 procedure TListaLiturgia.MouseMove(Shift: TShiftState; X, Y: Integer);
 var
-  it, novaAcao, faixa, alvo: Integer;
+  it, novaAcao, alvo: Integer;
   ac, acApagada: TAcaoItem;
   z: TZonaLit;
-  sobPolegar, apagado: Boolean;
+  b: TBarraRolagem;
+  novaZonaBarra: TZonaBarra;
+  apagado: Boolean;
 begin
   inherited;
 
+  b := barra;
+
   if FRolando then
   begin
-    faixa := ClientHeight - alturaPolegar;
-    if (faixa > 0) then
-      poeTopo(FRolaTopo + ((Y - FRolaY) * topoMaximo) div faixa);
+    poeTopo(b.topoDoArraste(Y, FRolaY, FRolaTopo, topoMaximo));
     Exit;
   end;
 
@@ -1263,7 +1296,10 @@ begin
     Exit;
   end;
 
-  sobPolegar := temBarra and PtInRect(retanguloPolegar, Point(X, Y));
+  //Só o realce dos dois botões e do polegar interessa: trilho não acende.
+  novaZonaBarra := b.zonaEm(Point(X, Y));
+  if not (novaZonaBarra in [zbSobe, zbDesce, zbPolegar]) then
+    novaZonaBarra := zbNada;
 
   z := zonaEm(Point(X, Y), it, ac);
   if (z = zoAcao) then
@@ -1299,12 +1335,12 @@ begin
     poeDica('');
 
   if (it <> FItemSob) or (z <> FZonaSob) or (novaAcao <> FAcaoSob) or
-     (sobPolegar <> FPolegarSob) then
+     (novaZonaBarra <> FZonaBarraSob) then
   begin
     FItemSob := it;
     FZonaSob := z;
     FAcaoSob := novaAcao;
-    FPolegarSob := sobPolegar;
+    FZonaBarraSob := novaZonaBarra;
     Invalidate;
   end;
 end;
@@ -1317,6 +1353,10 @@ var
   z: TZonaLit;
   mesmoAlvo: Boolean;
 begin
+  //Soltar o botao sempre encerra a repeticao da barra, venha de onde vier.
+  FTimerBarra.Enabled := False;
+  FZonaBarraPresa := zbNada;
+
   if FRolando then
   begin
     FRolando := False;
@@ -1387,12 +1427,13 @@ procedure TListaLiturgia.CMMouseLeave(var Message: TMessage);
 begin
   inherited;
   poeDica('');
-  if (FItemSob <> -1) or (FZonaSob <> zoNada) or FPolegarSob then
+  if (FItemSob <> -1) or (FZonaSob <> zoNada) or
+     (FZonaBarraSob <> zbNada) then
   begin
     FItemSob := -1;
     FZonaSob := zoNada;
     FAcaoSob := -1;
-    FPolegarSob := False;
+    FZonaBarraSob := zbNada;
     Invalidate;
   end;
 end;
