@@ -288,15 +288,27 @@ begin
 
     //A divisoria nao tem icone de proposito (o IconeDoItem devolve -1 para
     //ela), e arquivo precisa do subtipo para escolher entre pasta e arquivo.
-    //Os dois tipos de musica compartilham o icone de proposito: sao o mesmo
-    //tipo de item, e quem os separa e o rotulo. Escolher outro indice do
-    //ico_24x24 no chute e como a alca de arrastar sumiu em tema claro -- a
-    //lupa que o botao de buscar usa, por exemplo, e da ico_16x16.
-    ico := IconeDoItem(TIPOS_ITEM[i].codigo, SUB_ARQ, '');
-    if (ico >= 0) then
+    //Escolher outro indice do ico_24x24 no chute e como a alca de arrastar
+    //sumiu em tema claro -- a lupa que o botao de buscar usa, por exemplo,
+    //e da ico_16x16.
+    if EhDivisoria(TIPOS_ITEM[i].codigo) then
+      //A divisoria nao tem icone no ico_24x24 -- o IconeDoItem devolve -1
+      //de proposito. Ganha a lista com marcador, que e o que ela faz:
+      //agrupar os itens abaixo dela.
+      b.glifo := glBloco
+    else if EhMusica(TIPOS_ITEM[i].codigo) then
+      //Os dois tipos de musica ganham a NOTA DESENHADA, a mesma da lista
+      //da liturgia. O TBotaoChato desenha o glifo quando nao recebe lista
+      //de imagens, entao basta nao atribuir nenhuma.
+      b.glifo := glNota
+    else
     begin
-      b.imagens := DM.ico_24x24;
-      b.indiceImagem := ico;
+      ico := IconeDoItem(TIPOS_ITEM[i].codigo, SUB_ARQ, '');
+      if (ico >= 0) then
+      begin
+        b.imagens := DM.ico_24x24;
+        b.indiceImagem := ico;
+      end;
     end;
 
     botoesTipo[i] := b;

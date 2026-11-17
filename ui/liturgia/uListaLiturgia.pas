@@ -56,6 +56,11 @@ const
   MARGEM_ESQ   = 8;
   LARG_ALCA    = 26;   //a alca de arrastar (lit_modItem_btmove, icone 81)
   LARG_COR     = 40;   //o quadrado da cor do item, com o icone do tipo
+  //A nota de musica e desenhada, nao vem da lista de imagens. O glifo do
+  //uTema e projetado numa grade de 24, que e o tamanho nativo da ico_24x24
+  //-- igual aos icones dos outros tipos, entao as linhas nao ficam de
+  //tamanhos diferentes conforme o tipo.
+  LADO_NOTA    = 24;
   LARG_CHECK   = 30;
   MARGEM_TEXTO = 10;
   LARG_ACAO    = 34;   //igual a do uListaMusicas, para as duas baterem
@@ -1146,11 +1151,24 @@ begin
   cv.RoundRect(rc.Left, rc.Top, rc.Right, rc.Bottom, 6, 6);
   cv.Pen.Style := psSolid;
 
-  iconeTipo := IconeDoItem(FItens[i].tipo, FItens[i].subtipo,
-    FItens[i].subtitulo);
-  if (iconeTipo >= 0) then
-    DesenhaIcone(cv, rc, FImagens, iconeTipo, glNada, CorDeTextoSobre(cor),
-      True, cor);
+  //MUSICA E UMA NOTA DESENHADA, nao icone da lista. Os logotipos de
+  //coletanea (HASD, Novo Tempo, Diversas) diziam de que album a musica
+  //veio -- informacao que o subtitulo ja da por escrito -- e, pior,
+  //sumiam sobre item de cor clara, porque foram desenhados para o fundo
+  //escuro do _bticon. E a mesma armadilha da alca (secao 4k) e a mesma
+  //saida: desenhando, a cor sai do CorDeTextoSobre e vale contra qualquer
+  //cor que o usuario escolha para o item.
+  if EhMusica(FItens[i].tipo) then
+    DesenhaGlifo(cv, QuadradoCentral(rc, LADO_NOTA), glNota,
+      CorDeTextoSobre(cor))
+  else
+  begin
+    iconeTipo := IconeDoItem(FItens[i].tipo, FItens[i].subtipo,
+      FItens[i].subtitulo);
+    if (iconeTipo >= 0) then
+      DesenhaIcone(cv, rc, FImagens, iconeTipo, glNada,
+        CorDeTextoSobre(cor), True, cor);
+  end;
 
   //O check de concluido.
   desenhaCheck(cv, retanguloCheck(r), marcado,

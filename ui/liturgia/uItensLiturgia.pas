@@ -37,7 +37,10 @@ const
   TIPO_MUSICA          = 'musica';
   TIPO_SITE            = 'site';
 
-  //Subtipos que mudam o icone.
+  //Os subtipos que o INI guarda. Os tres primeiros valem so para musica, e
+  //HOJE NADA OS LE: o icone do item de musica deixou de depender da
+  //coletanea -- ver o IconeDoItem. Ficam porque nomeiam valor que esta
+  //gravado em liturgia de usuario e que o fmLiturgia continua escrevendo.
   SUB_HASD = 'hasd';
   SUB_JA   = 'ja';
   SUB_DIV  = 'div';
@@ -51,10 +54,15 @@ const
 
   //Indices no DM.ico_24x24, lidos dos lit_modItem* do fmMenu.dfm. Estavam
   //espalhados pelo carregaItemLiturgia como numero cru.
-  ICONE_MUS_HASD     = 47;
-  ICONE_MUS_JA       = 46;
-  ICONE_MUS_DIV      = 45;
-  ICONE_MUS_OUTRA    = 60;
+  //
+  //OS QUATRO DE MUSICA (47 HASD, 46 Novo Tempo, 45 Diversas, 60 outra) NAO
+  //ESTAO AQUI, e nao e esquecimento. Eram LOGOTIPO DE COLETANEA: diziam de
+  //que album a musica veio, que nao e o que o item E. E, como a alca de
+  //arrastar (secao 4k), foram desenhados para o fundo escuro que o
+  //lit_modItem_bticon tinha (Color = $004F0000), entao sobre item de cor
+  //clara eles desapareciam. Musica passou a ser uma NOTA DESENHADA, que
+  //tira a cor do tema: o IconeDoItem devolve -1 e quem desenha usa o
+  //glNota do uTema.
   ICONE_SITE_YOUTUBE = 38;
   ICONE_SITE         = 49;
   ICONE_PASTA        = 32;
@@ -125,7 +133,9 @@ function EhMusica(const tipo: string): Boolean;
 //Mesma deteccao do carregaItemLiturgia de hoje, que olha quatro formas.
 function EhYoutube(const url: string): Boolean;
 
-//O icone do tipo, no ico_24x24. -1 quando o tipo nao tem icone (divisoria).
+//O icone do tipo, no ico_24x24. -1 quando o tipo nao tem icone DA LISTA:
+//divisoria, que nao tem icone nenhum, e musica, que e desenhada como nota
+//-- ver o comentario dos ICONE_* e o EhMusica.
 function IconeDoItem(const tipo, subtipo, subitem: string): Integer;
 
 //Altura da linha, e o respiro que vem antes dela.
@@ -187,18 +197,9 @@ function IconeDoItem(const tipo, subtipo, subitem: string): Integer;
 begin
   Result := -1;
 
-  if SameText(tipo, TIPO_MUSICA) then
-  begin
-    if SameText(subtipo, SUB_HASD) then
-      Result := ICONE_MUS_HASD
-    else if SameText(subtipo, SUB_JA) then
-      Result := ICONE_MUS_JA
-    else if SameText(subtipo, SUB_DIV) then
-      Result := ICONE_MUS_DIV
-    else
-      Result := ICONE_MUS_OUTRA;
-  end
-  else if SameText(tipo, TIPO_SITE) then
+  //Musica nao entra: ela e desenhada como nota, pelos dois motivos do
+  //comentario dos ICONE_*.
+  if SameText(tipo, TIPO_SITE) then
   begin
     if EhYoutube(subitem) then
       Result := ICONE_SITE_YOUTUBE

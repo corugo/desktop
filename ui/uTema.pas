@@ -90,7 +90,7 @@ var
 type
   TGlifo = (
     glNada,
-    glNota,            //musica do acervo -- coluna da esquerda do item
+    glNota,            //o TIPO musica: duas colcheias ligadas (notaDupla)
     glPasta,           //arquivo de coletanea personalizada
     glSlideCantado,    //Tag 1 do fmListaMusica atual
     glSlidePlayback,   //Tag 2
@@ -100,7 +100,8 @@ type
     glLetra,           //Tag 6
     glReproduzirTodas,
     glProjetar,
-    glSetaBaixo);
+    glSetaBaixo,
+    glBloco);          //a divisoria: lista com marcador
 
   TAlinhaTexto = (alinEsquerda, alinCentro, alinDireita);
 
@@ -268,6 +269,11 @@ var
   //do componente, que clonava o PNG a cada icone apagado.
   rascunhoApagado: TBitmap = nil;
 
+  //Os dois do antisserrilhado do glifo: a mascara ampliada e o retangulo
+  //de destino ja composto. Mesmo motivo do de cima -- uma thread so pinta.
+  mascaraGlifo: TBitmap = nil;
+  alvoGlifo: TBitmap = nil;
+
 //PORTE: esta e a unica rotina da unit que toca em pixel. O ScanLine existe no
 //TBitmap da VCL; no LCL o acesso e por TLazIntfImage. Uma funcao a reescrever.
 procedure desenhaApagado(cv: TCanvas; x, y: Integer; lista: TCustomImageList;
@@ -410,7 +416,10 @@ begin
   cv.TextOut(x, y, t);
 end;
 
-procedure DesenhaGlifo(cv: TCanvas; const r: TRect; glifo: TGlifo; cor: TColor);
+//O glifo CRU, sem suavizar: e o que desenha de fato. Quem chama de fora e
+//o DesenhaGlifo logo abaixo, que o usa como mascara.
+procedure desenhaGlifoCru(cv: TCanvas; const r: TRect; glifo: TGlifo;
+  cor: TColor);
 
   function px(x: Integer): Integer;
   begin
@@ -428,11 +437,22 @@ procedure DesenhaGlifo(cv: TCanvas; const r: TRect; glifo: TGlifo; cor: TColor);
     Result.Y := py(y);
   end;
 
+  //A espessura TEM de escalar junto com o glifo. O Pen.Width e em pixels e
+  //nao acompanha o retangulo -- e o DesenhaGlifo agora desenha isto aqui
+  //AMPLIADO, para servir de mascara. Sem esta conta as linhas sairiam
+  //finas 4x e os glifos de traco virariam fio de cabelo.
+  function esp(n: Integer): Integer;
+  begin
+    Result := Round(n * (r.Right - r.Left) / 24);
+    if (Result < 1) then
+      Result := 1;
+  end;
+
   procedure linha(x1, y1, x2, y2: Integer);
   begin
     cv.Pen.Style := psSolid;
     cv.Pen.Color := cor;
-    cv.Pen.Width := 2;
+    cv.Pen.Width := esp(2);
     cv.MoveTo(px(x1), py(y1));
     cv.LineTo(px(x2), py(y2));
   end;
@@ -441,7 +461,7 @@ procedure DesenhaGlifo(cv: TCanvas; const r: TRect; glifo: TGlifo; cor: TColor);
   begin
     cv.Pen.Style := psSolid;
     cv.Pen.Color := cor;
-    cv.Pen.Width := 2;
+    cv.Pen.Width := esp(2);
     cv.Brush.Style := bsClear;
     cv.Rectangle(px(x1), py(y1), px(x2), py(y2));
   end;
@@ -466,10 +486,104 @@ procedure DesenhaGlifo(cv: TCanvas; const r: TRect; glifo: TGlifo; cor: TColor);
     linha(x + 7, 4, x + 14, 6);
   end;
 
+  //Duas colcheias ligadas pela barra -- a nota de DUAS PERNAS.
+  //
+  //NAO reaproveita a `nota` acima de proposito: aquela e a ACAO 'audio
+  //cantado' (glAudioCantado/glAudioPlayback), e as duas aparecem na mesma
+  //tela da liturgia -- o tipo do item a esquerda e a faixa de acoes a
+  //direita. Mesmo desenho para coisas diferentes confunde, e o playback
+  //ainda precisa do espaco da barrinha em x = 20.
+  //
+  //Tudo preenchido, sem Pen: a espessura do Pen NAO escala junto com o
+  //glifo, entao num retangulo maior o traco sairia fino demais.
+  //Uma cabeca de nota: elipse INCLINADA, como na notacao de verdade.
+  //
+  //Sai de Polygon e nao de Ellipse porque o Ellipse do GDI e sempre alinhado
+  //aos eixos, e a inclinacao e justamente o que faz a cabeca parecer uma nota
+  //em vez de um ponto. Recebe Double porque o centro cai em meia unidade da
+  //grade -- arredondar antes deslocaria a cabeca em 1px, que aqui e muito.
+  procedure cabeca(cx, cy, larg, alt: Double);
+  const
+    LADOS = 16;      //poligono de 16 lados ja e redondo nesta escala
+    INCL  = -0.42;   //radianos, ~24 graus: a ponta direita sobe
+  var
+    i: Integer;
+    a, ex, ey, sn, cs: Double;
+    pts: array[0..LADOS - 1] of TPoint;
+  begin
+    sn := Sin(INCL);
+    cs := Cos(INCL);
+    for i := 0 to LADOS - 1 do
+    begin
+      a := 2 * Pi * i / LADOS;
+      ex := (larg / 2) * Cos(a);
+      ey := (alt / 2) * Sin(a);
+      pts[i].X := r.Left + Round((cx + ex * cs - ey * sn) * (r.Right - r.Left) / 24);
+      pts[i].Y := r.Top  + Round((cy + ex * sn + ey * cs) * (r.Bottom - r.Top) / 24);
+    end;
+    cv.Polygon(pts);
+  end;
+
+  //Duas colcheias ligadas pela barra -- a nota de DUAS PERNAS.
+  //
+  //NAO reaproveita a `nota` simples acima de proposito: aquela e a ACAO
+  //'audio cantado' (glAudioCantado/glAudioPlayback), e as duas aparecem na
+  //mesma tela da liturgia -- o tipo do item a esquerda e a faixa de acoes a
+  //direita. Mesmo desenho para coisas diferentes confunde, e o playback ainda
+  //precisa do espaco da barrinha em x = 20.
+  //
+  //AS MEDIDAS SAIRAM DO EMOJI, nao do chute: o U+266B foi reamostrado nesta
+  //mesma grade de 24 (scratchpad/teste/mede-emoji.ps1) e o que ele mostrou foi
+  //que a nota e quase QUADRADA (59x62 na imagem) e ocupa a grade inteira. A
+  //versao anterior era larga e baixa, e era isso que a deixava estranha.
+  //Uma linha da lista com marcador: o ponto e a barra.
+  procedure itemLista(y: Integer);
+  begin
+    cv.Ellipse(px(1), py(y), px(6), py(y + 5));
+    cv.RoundRect(px(9), py(y), px(23), py(y + 5), esp(5), esp(5));
+  end;
+
+  procedure notaDupla;
+  const
+    X1    = 6;    //x da haste esquerda
+    X2    = 20;   //x da direita
+    HASTE = 3;
+    TOPO  = 2;    //y do topo da barra, do lado esquerdo
+    SOBE  = 2;    //quanto ela sobe da esquerda para a direita
+    BARRA = 4;    //espessura dela
+    //As duas cabecas em ALTURAS DIFERENTES, como duas notas ligadas pela
+    //barra. Na mesma linha elas encostam uma na outra -- nao cabe afastar
+    //mais dentro de 24 -- e viram um borrao so.
+    PE1   = 19;   //centro da cabeca da esquerda
+    PE2   = 17;   //a da direita fica mais alta
+    CAB_L = 9;
+    CAB_A = 7;    //mais larga que alta, como cabeca de nota de verdade
+  begin
+    //CANETA LIGADA, na mesma cor do pincel. Com psClear o GDI preenche a
+    //figura MENOS a borda, e numa cabeca deste tamanho isso nao deixa quase
+    //nada: a primeira versao saiu com dois pontinhos no lugar delas.
+    cv.Pen.Style := psSolid;
+    cv.Pen.Width := esp(1);
+    cv.Pen.Color := cor;
+    cv.Brush.Style := bsSolid;
+    cv.Brush.Color := cor;
+
+    //As duas hastes, cada uma descendo ate a sua cabeca.
+    cv.Rectangle(px(X1), py(TOPO), px(X1 + HASTE), py(PE1));
+    cv.Rectangle(px(X2), py(TOPO - SOBE), px(X2 + HASTE), py(PE2));
+
+    //A barra, inclinada como no simbolo: sobe da esquerda para a direita.
+    cv.Polygon([pt(X1, TOPO), pt(X2 + HASTE, TOPO - SOBE),
+                pt(X2 + HASTE, TOPO - SOBE + BARRA), pt(X1, TOPO + BARRA)]);
+
+    //As cabecas, penduradas a esquerda da ponta de cada haste.
+    cabeca(X1 + HASTE - CAB_L / 2, PE1, CAB_L, CAB_A);
+    cabeca(X2 + HASTE - CAB_L / 2, PE2, CAB_L, CAB_A);
+  end;
 begin
   case glifo of
     glNota:
-      nota(4);
+      notaDupla;
 
     glPasta:
       begin
@@ -538,14 +652,140 @@ begin
         cv.Polygon([pt(8, 10), pt(16, 10), pt(12, 16)]);
         cv.Pen.Style := psSolid;
       end;
+
+    glBloco:
+      begin
+        //Tres pontos e tres barras: a divisoria agrupa os itens abaixo
+        //dela, e e isso que o desenho diz.
+        //
+        //CANETA LIGADA na mesma cor: com psClear o GDI preenche a figura
+        //menos a borda, e o ponto tem 5x5 -- do tamanho exato que sumiu
+        //quando a cabeca da nota foi desenhada assim.
+        cv.Pen.Style := psSolid;
+        cv.Pen.Width := esp(1);
+        cv.Pen.Color := cor;
+        cv.Brush.Style := bsSolid;
+        cv.Brush.Color := cor;
+        itemLista(3);
+        itemLista(10);
+        itemLista(17);
+      end;
   end;
 
   cv.Pen.Width := 1;
 end;
 
+//O glifo, com as bordas suavizadas.
+//
+//POR QUE PRECISA DISSO: o GDI nao suaviza NADA -- Polygon, Ellipse e Rectangle
+//saem com a borda em degrau. Num glifo de 24px feito de diagonais (a nota
+//inclinada, a barra inclinada, o triangulo do play) o degrau tem o tamanho do
+//traco, e o desenho parece quadriculado. Foi o que o usuario viu na nota.
+//
+//COMO: desenha numa mascara ESCALA vezes maior, preto sobre branco, e depois
+//cada pixel do destino recebe a cor misturada com o que ja estava ali, na
+//proporcao de quanto do bloco ESCALA x ESCALA ficou preto. E o filtro de caixa
+//de sempre -- a mesma ideia da mascara da arte do .slja (secao 4m), e pelo
+//mesmo motivo: desenhar com alfa por primitiva compoe duas vezes na emenda.
+//
+//O FUNDO VEM DA PROPRIA TELA (CopyRect), nao por parametro: o glifo e pintado
+//sobre a cor que o usuario escolheu para o item, sobre o botao da trilha ou
+//sobre a linha realcada, e nenhum chamador sabe dizer qual e.
+procedure DesenhaGlifo(cv: TCanvas; const r: TRect; glifo: TGlifo; cor: TColor);
+const
+  ESCALA = 4;        //4x4 = 17 niveis de cobertura, de sobra nesta escala
+  LADO_MAX = 160;    //acima disto o degrau ja nao aparece e a mascara custa
+var
+  w, h, lin, col, sx, sy, soma: Integer;
+  c: TColor;
+  vr, vg, vb: Integer;
+  pm, pa: PPixelBGR;
+  linhas: array[0 .. ESCALA - 1] of PPixelBGR;
+begin
+  if (glifo = glNada) then
+    Exit;
+
+  w := r.Right - r.Left;
+  h := r.Bottom - r.Top;
+  if (w <= 0) or (h <= 0) then
+    Exit;
+
+  if (w > LADO_MAX) or (h > LADO_MAX) then
+  begin
+    desenhaGlifoCru(cv, r, glifo, cor);
+    Exit;
+  end;
+
+  if (mascaraGlifo = nil) then
+  begin
+    mascaraGlifo := TBitmap.Create;
+    mascaraGlifo.PixelFormat := pf24bit;
+    alvoGlifo := TBitmap.Create;
+    alvoGlifo.PixelFormat := pf24bit;
+  end;
+
+  if (mascaraGlifo.Width <> w * ESCALA) or
+     (mascaraGlifo.Height <> h * ESCALA) then
+    mascaraGlifo.SetSize(w * ESCALA, h * ESCALA);
+  if (alvoGlifo.Width <> w) or (alvoGlifo.Height <> h) then
+    alvoGlifo.SetSize(w, h);
+
+  //A mascara, ampliada: preto sobre branco.
+  mascaraGlifo.Canvas.Brush.Style := bsSolid;
+  mascaraGlifo.Canvas.Brush.Color := clWhite;
+  mascaraGlifo.Canvas.FillRect(Rect(0, 0, mascaraGlifo.Width,
+    mascaraGlifo.Height));
+  desenhaGlifoCru(mascaraGlifo.Canvas, Rect(0, 0, w * ESCALA, h * ESCALA),
+    glifo, clBlack);
+
+  //O que ja esta na tela naquele retangulo, para misturar contra.
+  alvoGlifo.Canvas.CopyRect(Rect(0, 0, w, h), cv, r);
+
+  c := ColorToRGB(cor);
+  vr := c and $FF;
+  vg := (c shr 8) and $FF;
+  vb := (c shr 16) and $FF;
+
+  for lin := 0 to h - 1 do
+  begin
+    for sy := 0 to ESCALA - 1 do
+      linhas[sy] := PPixelBGR(mascaraGlifo.ScanLine[lin * ESCALA + sy]);
+    pa := PPixelBGR(alvoGlifo.ScanLine[lin]);
+
+    for col := 0 to w - 1 do
+    begin
+      soma := 0;
+      for sy := 0 to ESCALA - 1 do
+      begin
+        pm := linhas[sy];
+        Inc(pm, col * ESCALA);
+        for sx := 0 to ESCALA - 1 do
+        begin
+          //Preto = coberto. A mascara nao tem meio-tom nenhum, justamente
+          //porque o GDI nao suaviza -- o meio-tom nasce aqui, da contagem.
+          if (pm^.r < 128) then
+            Inc(soma);
+          Inc(pm);
+        end;
+      end;
+
+      if (soma > 0) then
+      begin
+        pa^.b := Byte(pa^.b + ((vb - pa^.b) * soma) div (ESCALA * ESCALA));
+        pa^.g := Byte(pa^.g + ((vg - pa^.g) * soma) div (ESCALA * ESCALA));
+        pa^.r := Byte(pa^.r + ((vr - pa^.r) * soma) div (ESCALA * ESCALA));
+      end;
+      Inc(pa);
+    end;
+  end;
+
+  cv.Draw(r.Left, r.Top, alvoGlifo);
+end;
 initialization
 
 finalization
   rascunhoApagado.Free;
+  mascaraGlifo.Free;
+  alvoGlifo.Free;
 
 end.
