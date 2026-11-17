@@ -113,7 +113,13 @@ function CorRGB(r, g, b: Byte): TColor;
 //de uma tabela para cada caso.
 function Mistura(a, b: TColor; pesoB: Integer): TColor;
 
-//Esta cor e escura? Luminancia, com os pesos de sempre (30/59/11).
+//Luminancia 0..255, com os pesos de sempre (30/59/11). Exportada porque e o
+//que mede contraste, e os testes em console conferem por ela em vez de
+//refazer a conta -- refazer e como o espelho em .ps1 que errava antes do
+//codigo.
+function Luminancia(c: TColor): Integer;
+
+//Esta cor e escura? E a luminancia abaixo da metade.
 function CorEscura(c: TColor): Boolean;
 
 //Branco ou quase-preto, o que tiver contraste SOBRE a cor dada. Serve para
@@ -195,12 +201,24 @@ begin
     (((a shr 16) and $FF) * pa + ((b shr 16) and $FF) * pesoB) div 100);
 end;
 
+//Luminancia aproximada, com os pesos de sempre (30/59/11).
+//
+//O TColor e $00BBGGRR, entao o vermelho esta no byte BAIXO -- trocar a ordem
+//faz a conta PARECER certa e dar resultado invertido em cor saturada. O
+//ColorToRGB resolve cor de sistema (clBtnFace e companhia), que nao tem os
+//bytes no valor.
+function Luminancia(c: TColor): Integer;
+var
+  v: Integer;
+begin
+  v := ColorToRGB(c);
+  Result := ((v and $FF) * 30 + ((v shr 8) and $FF) * 59 +
+             ((v shr 16) and $FF) * 11) div 100;
+end;
+
 function CorEscura(c: TColor): Boolean;
 begin
-  //Luminancia aproximada, com os pesos de sempre (30/59/11). O TColor e
-  //$00BBGGRR, entao o vermelho esta no byte BAIXO.
-  Result := ((c and $FF) * 30 + ((c shr 8) and $FF) * 59 +
-             ((c shr 16) and $FF) * 11) div 100 < 128;
+  Result := Luminancia(c) < 128;
 end;
 
 function CorDeTextoSobre(c: TColor): TColor;
@@ -224,6 +242,25 @@ begin
   //padrao escrito nas variaveis e melhor do que o que viesse dali.
   if (item = texto) or (fundo = texto) then
     Exit;
+
+  //O CARTAO NUNCA E MAIS ESCURO QUE A SUPERFICIE DO PROGRAMA.
+  //
+  //O `item` chega como cWindow, que e a cor de CAIXA DE TEXTO do skin, e
+  //nos dois temas escuros daqui ela e PRETO PURO -- enquanto o cBtnFace,
+  //que e a cor dos paineis, e ardosia (55,66,79) no "Escuro - Cinza" e
+  //preto no "Escuro - Preto". Medido descompactando o [SKINCOLORS] de
+  //dentro de cada skin (scratchpad/teste/mede-skins.ps1), nao suposto.
+  //
+  //Resultado: a lista saia PRETA nos dois, e no cinza ficava um buraco no
+  //meio de um programa ardosia -- foi o que o usuario relatou, na liturgia
+  //e no painel das coletaneas, que leem a mesma paleta.
+  //
+  //A lista nao e uma caixa de texto: no .dfm antigo cada item era um
+  //TbsSkinPanel com SkinDataName = 'panel', ou seja a superficie do
+  //programa. Entao o piso do cartao e o fundo. Nos temas claros isto nao
+  //muda nada (branco ja e mais claro que o $F1F1F1 do painel).
+  if (Luminancia(item) < Luminancia(fundo)) then
+    item := fundo;
 
   COR_FUNDO := fundo;
   COR_ITEM := item;

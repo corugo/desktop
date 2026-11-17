@@ -1098,9 +1098,11 @@ begin
   else if (i = FItemSob) then
     corLinha := COR_ITEM_SOB
   else if marcado then
-    //Item ja realizado: a linha recua para o fundo, em vez de ganhar o azul
-    //fixo ($00CED5FF no .dfm) que destoaria de qualquer tema.
-    corLinha := Mistura(COR_ITEM, COR_FUNDO, 60)
+    //Item ja realizado. Era um azul FIXO no .dfm ($00CED5FF), que destoaria
+    //de qualquer tema. Tinge com o ACENTO e nao com o fundo porque nos temas
+    //escuros o cartao E o fundo (ver a regra do cartao em AplicaPaleta), e
+    //ali misturar com o fundo nao mudaria cor nenhuma.
+    corLinha := Mistura(COR_ITEM, COR_ACENTO, 18)
   else
     corLinha := COR_ITEM;
 
