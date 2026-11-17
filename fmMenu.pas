@@ -1992,6 +1992,7 @@ type
     function itemDaLiturgia(const item: string;
       ordem: Integer): TItemLiturgia;
     function textoDoItemAgendado(const item: string): string;
+    function musicaTemPlayback(id: Integer): Boolean;
     function musicaDoItemTemPlayback(const item: string): Boolean;
     //Remonta a lista a partir do lbLiturgia, sem reler a ordem.
     procedure desenhaLiturgia;
@@ -6355,25 +6356,32 @@ end;
 //A musica deste item tem playback? E a MESMA regra do menu de musicas
 //(URL_INSTRUMENTAL preenchido), e e ela que decide quais dos seis botoes
 //ficam ativos e quais saem apagados.
-function TfmIndex.musicaDoItemTemPlayback(const item: string): Boolean;
+function TfmIndex.musicaTemPlayback(id: Integer): Boolean;
 begin
-  //Escolha na hora (musica = -1) nao da para conferir ainda: oferece os dois
-  //playbacks, como o codigo antigo fazia.
-  if (lerParam(item, 'musica', '0', arq_liturgia) = '-1') then
+  //Sem musica para conferir (escolha na hora, id invalido) a resposta e SIM:
+  //esconder o playback de uma musica que ainda nao se sabe qual e seria
+  //tirar uma opcao legitima. Era assim que o codigo antigo se comportava.
+  if (id <= 0) then
   begin
     Result := True;
     Exit;
   end;
 
   DM.qrMUSICA.Close;
-  DM.qrMUSICA.ParamByName('ID').Value :=
-    StrToInt('0' + lerParam(item, 'musica', '0', arq_liturgia));
+  DM.qrMUSICA.ParamByName('ID').Value := id;
   DM.qrMUSICA.Open;
 
   if (DM.qrMUSICA.RecordCount <= 0) then
     Result := True
   else
     Result := (DM.qrMUSICA.FieldByName('URL_INSTRUMENTAL').AsString <> '');
+end;
+
+function TfmIndex.musicaDoItemTemPlayback(const item: string): Boolean;
+begin
+  //Escolha na hora grava musica = -1, e o musicaTemPlayback ja trata id <= 0.
+  Result := musicaTemPlayback(
+    StrToIntDef(lerParam(item, 'musica', '0', arq_liturgia), 0));
 end;
 
 function TfmIndex.itemDaLiturgia(const item: string;
@@ -6389,6 +6397,7 @@ begin
   Result.subtitulo := '';
   Result.acoes := [];
   Result.possiveis := [];
+  Result.modo := MODO_PADRAO;
 
   if not EhDivisoria(Result.tipo) then
   begin
@@ -6406,6 +6415,7 @@ begin
       //coluna" -- mesma escolha ja feita no menu de musicas.
       Result.possiveis := PossiveisDaMusica;
       Result.acoes := AcoesDaMusica(musicaDoItemTemPlayback(item));
+      Result.modo := ModoDoParam(lerParam(item, CHAVE_MODO, '', arq_liturgia));
     end;
   end;
 
@@ -8064,6 +8074,13 @@ begin
   end
   else if (lerParam(item, 'tipo', '', arq_liturgia) = 'musica') then
   begin
+    //Tag 0 e o clique no CORPO do item -- os seis icones mandam o tag deles.
+    //E o corpo e quem respeita o modo escolhido na edicao. Um ponto so: o
+    //clique da tela e a API passam os dois por aqui.
+    if (tag = 0) then
+      tag := TagDaAcao(ModoDoParam(lerParam(item, CHAVE_MODO, '',
+        arq_liturgia)));
+
     if (lerParam(item, 'escolha', '0', arq_liturgia) = '1') then
     begin
       fIniciando.AppCreateForm(TfBuscaMusica, fBuscaMusica);

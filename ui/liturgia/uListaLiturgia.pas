@@ -63,6 +63,19 @@ const
   //Abaixo disto o texto do item nao vale a pena: entra na largura minima.
   LARG_MIN_TEXTO = 150;
 
+  //A tag do modo de abertura, ao lado do nome. So aparece quando o modo nao
+  //e o padrao -- ver MostraTagDoModo.
+  //
+  //SEM ICONE, de proposito: o DesenhaIcone centra a imagem no TAMANHO
+  //NATIVO da lista (24px), nao no retangulo que recebe -- o retangulo so
+  //posiciona. Um icone de 24px numa capsula de 20 estourava para fora, que
+  //foi como a primeira versao ficou grande demais. E o icone era redundante:
+  //os mesmos seis ja estao na faixa de acoes da propria linha.
+  ESPACO_TAG  = 8;    //entre o fim do nome e a tag
+  RESPIRO_TAG = 6;    //dentro da tag, nas duas pontas
+  ALT_TAG     = 16;
+  FONTE_TAG   = 10;
+
   //LARG_BARRA e MIN_POLEGAR saíram para o uBarraRolagem: o menu de músicas
   //desenha a mesma barra, e medida repetida em dois lugares é fazenda de bug.
 
@@ -190,6 +203,8 @@ type
     procedure desenhaAlca(cv: TCanvas; const r: TRect;
       fundo: TColor; sob: Boolean);
     procedure desenhaCheck(cv: TCanvas; const r: TRect; marcado, sob: Boolean);
+    function larguraDaTag(cv: TCanvas; modo: TAcaoItem): Integer;
+    procedure desenhaTag(cv: TCanvas; const r: TRect; modo: TAcaoItem);
     procedure desenhaMarcaDeInsercao(cv: TCanvas);
     function corDoItem(i: Integer): TColor;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
@@ -966,6 +981,44 @@ begin
   cv.Brush.Style := bsSolid;
 end;
 
+function TListaLiturgia.larguraDaTag(cv: TCanvas; modo: TAcaoItem): Integer;
+begin
+  //Mede com a fonte DA TAG, que nao e a do titulo. Por isso quem chama mede
+  //antes e so depois prepara a fonte do titulo -- medir com a fonte errada
+  //daria largura errada e a tag sairia por cima do nome.
+  PreparaFonte(cv, FONTE_TAG, False, COR_TEXTO);
+  Result := RESPIRO_TAG + cv.TextWidth(NomeDaAcao(modo)) + RESPIRO_TAG;
+end;
+
+procedure TListaLiturgia.desenhaTag(cv: TCanvas; const r: TRect;
+  modo: TAcaoItem);
+var
+  q: TRect;
+  alt: Integer;
+begin
+  //O texto e o NomeDaAcao, o mesmo do seletor do form e da legenda dos seis
+  //icones -- um vocabulario so, do uMenuMusicas.
+  //
+  //O FUNDO E O REALCE, NAO O ACENTO: o realce e vizinho da cor da linha,
+  //entao a tag nao vira um bloco de cor no meio do texto. A atencao vem da
+  //BORDA de acento, que e desenhada por nos e segue o tema.
+  alt := ALT_TAG;
+  q := r;
+  q.Top := r.Top + ((r.Bottom - r.Top - alt) div 2);
+  q.Bottom := q.Top + alt;
+
+  cv.Brush.Style := bsSolid;
+  cv.Brush.Color := COR_REALCE;
+  cv.Pen.Style := psSolid;
+  cv.Pen.Width := 1;
+  cv.Pen.Color := COR_ACENTO;
+  cv.RoundRect(q.Left, q.Top, q.Right, q.Bottom, alt, alt);
+
+  PreparaFonte(cv, FONTE_TAG, False, COR_TEXTO);
+  DesenhaTexto(cv, Rect(q.Left + RESPIRO_TAG, q.Top,
+    q.Right - RESPIRO_TAG, q.Bottom), NomeDaAcao(modo), alinCentro);
+end;
+
 procedure TListaLiturgia.desenhaDivisoria(cv: TCanvas; i: Integer);
 var
   r, rt, rb: TRect;
@@ -1023,8 +1076,8 @@ var
   r, rc, ra, rt: TRect;
   ac: TAcaoItem;
   corLinha, corTxt, corFraco, corGlifo, cor: TColor;
-  ativa, marcado: Boolean;
-  iconeTipo, fimTexto, meio: Integer;
+  ativa, marcado, mostraTag: Boolean;
+  iconeTipo, fimTexto, meio, largTag, largTitulo, xTag: Integer;
 begin
   if EhDivisoria(FItens[i].tipo) then
   begin
@@ -1110,9 +1163,31 @@ begin
   if (rt.Right > rt.Left) then
   begin
     meio := r.Top + (FH[i] div 2);
+
+    //A tag do modo de abertura, quando ele nao e o padrao. A largura dela e
+    //RESERVADA antes de desenhar o titulo: sem isso o nome comprido truncava
+    //em cima da tag, porque o DesenhaTexto so conhece o retangulo que recebe.
+    mostraTag := MostraTagDoModo(FItens[i].tipo, FItens[i].modo);
+    if mostraTag then
+      largTag := larguraDaTag(cv, FItens[i].modo)
+    else
+      largTag := 0;
+
     PreparaFonte(cv, 15, True, corTxt, marcado);
-    DesenhaTexto(cv, Rect(rt.Left, r.Top + 4, rt.Right, meio + 2),
+    largTitulo := cv.TextWidth(FItens[i].titulo);
+    DesenhaTexto(cv, Rect(rt.Left, r.Top + 4, rt.Right - largTag, meio + 2),
       FItens[i].titulo, alinEsquerda);
+
+    if mostraTag then
+    begin
+      //Ao LADO do nome quando ele cabe; encostada na direita quando o nome
+      //ocupou a linha e foi truncado.
+      xTag := rt.Left + largTitulo + ESPACO_TAG;
+      if (xTag + largTag > rt.Right) then
+        xTag := rt.Right - largTag;
+      desenhaTag(cv, Rect(xTag, r.Top + 4, xTag + largTag, meio + 2),
+        FItens[i].modo);
+    end;
 
     if (FItens[i].subtitulo <> '') then
     begin

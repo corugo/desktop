@@ -37,11 +37,13 @@ type
     FGlifo: TGlifo;
     FSob: Boolean;
     FPressionado: Boolean;
+    FSelecionado: Boolean;
     FMostraSeta: Boolean;
     FCorFundo: TColor;
     FImagens: TCustomImageList;
     FIndiceImagem: Integer;
     procedure poeGlifo(v: TGlifo);
+    procedure poeSelecionado(v: Boolean);
     procedure poeMostraSeta(v: Boolean);
     procedure CMMouseEnter(var Message: TMessage); message CM_MOUSEENTER;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
@@ -58,6 +60,10 @@ type
     //skin; aqui a conta e feita com a fonte de verdade.
     function larguraIdeal: Integer;
     property glifo: TGlifo read FGlifo write poeGlifo;
+    //Seleção que FICA, diferente do FPressionado, que só vale enquanto o
+    //botão do mouse está apertado. É o que permite usar o botão como aba ou
+    //como item de uma escolha entre vários.
+    property selecionado: Boolean read FSelecionado write poeSelecionado;
     property mostraSeta: Boolean read FMostraSeta write poeMostraSeta;
     property corFundo: TColor read FCorFundo write FCorFundo;
     //Icone de verdade; nao havendo lista, vale o glifo desenhado.
@@ -136,6 +142,15 @@ begin
   Cursor := crHandPoint;
 end;
 
+procedure TBotaoChato.poeSelecionado(v: Boolean);
+begin
+  if (FSelecionado <> v) then
+  begin
+    FSelecionado := v;
+    Invalidate;
+  end;
+end;
+
 procedure TBotaoChato.poeGlifo(v: TGlifo);
 begin
   if (FGlifo <> v) then
@@ -200,7 +215,7 @@ end;
 procedure TBotaoChato.Paint;
 var
   r, rg, rt, rs: TRect;
-  corTexto: TColor;
+  corTexto, fundo: TColor;
 begin
   r := ClientRect;
 
@@ -208,27 +223,37 @@ begin
   Canvas.Brush.Color := FCorFundo;
   Canvas.FillRect(r);
 
-  if Enabled and (FPressionado or FSob) then
+  //O fundo de verdade por baixo do ícone e do texto. Era sempre o FCorFundo,
+  //o que só não aparecia porque misturar contra a cor errada muda apenas
+  //ícone apagado -- com a seleção, que é escura em tema claro, apareceria.
+  fundo := FCorFundo;
+
+  if Enabled and (FPressionado or FSelecionado or FSob) then
   begin
     Canvas.Pen.Style := psClear;
-    if FPressionado then
-      Canvas.Brush.Color := COR_ITEM_SEL
+    if (FPressionado or FSelecionado) then
+      fundo := COR_ITEM_SEL
     else
-      Canvas.Brush.Color := COR_REALCE;
+      fundo := COR_REALCE;
+    Canvas.Brush.Color := fundo;
     Canvas.RoundRect(r.Left, r.Top, r.Right, r.Bottom, 6, 6);
     Canvas.Pen.Style := psSolid;
   end;
 
-  if Enabled then
-    corTexto := COR_TEXTO
+  if not Enabled then
+    corTexto := COR_TEXTO_FRACO
+  //Em tema claro a seleção é escura: com COR_TEXTO o nome sumiria dentro
+  //dela. É a mesma razão da linha selecionada das listas.
+  else if (FPressionado or FSelecionado) then
+    corTexto := COR_TEXTO_SEL
   else
-    corTexto := COR_TEXTO_FRACO;
+    corTexto := COR_TEXTO;
 
   rg := Rect(r.Left + MARGEM_BOTAO, r.Top, r.Left + MARGEM_BOTAO + LADO_GLIFO,
              r.Bottom);
   if (FImagens <> nil) or (FGlifo <> glNada) then
     DesenhaIcone(Canvas, rg, FImagens, FIndiceImagem, FGlifo, corTexto,
-      Enabled, FCorFundo);
+      Enabled, fundo);
 
   rt := Rect(rg.Right + ESPACO_GLIFO, r.Top, r.Right - MARGEM_BOTAO, r.Bottom);
   if FMostraSeta then

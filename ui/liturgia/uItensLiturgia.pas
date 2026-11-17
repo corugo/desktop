@@ -44,6 +44,11 @@ const
   SUB_DIR  = 'dir';
   SUB_ARQ  = 'arq';
 
+  //A chave que guarda o modo de abertura, e o modo que vale quando ela nao
+  //existe. Ver ModoDoParam.
+  CHAVE_MODO = 'modo';
+  MODO_PADRAO = acSlideCantado;
+
   //Indices no DM.ico_24x24, lidos dos lit_modItem* do fmMenu.dfm. Estavam
   //espalhados pelo carregaItemLiturgia como numero cru.
   ICONE_MUS_HASD     = 47;
@@ -103,6 +108,10 @@ type
     //igual ao menu de musicas.
     acoes: TAcoesItem;
     possiveis: TAcoesItem;
+
+    //Como o clique no CORPO do item abre a musica (chave `modo`). So vale
+    //para tipo musica, e o padrao e o MODO_PADRAO -- ver ModoDoParam.
+    modo: TAcaoItem;
   end;
 
   TItensLiturgia = array of TItemLiturgia;
@@ -127,6 +136,28 @@ function RespiroDoItem(const tipo: string): Integer;
 //mesma, e tela que repete regra e tela que diverge com o tempo.
 function AcoesDaMusica(temPlayback: Boolean): TAcoesItem;
 function PossiveisDaMusica: TAcoesItem;
+
+//O modo guardado na chave `modo`, que diz como o clique no CORPO do item
+//abre a musica.
+//
+//VALOR AUSENTE E O MODO_PADRAO, E ISSO PRESERVA O COMPORTAMENTO ANTIGO BYTE A
+//BYTE: o clique no corpo sempre passou `tag = 0` ao executaItemLiturgia, que
+//cai no ramo final com txt vazio (porque tag <> 2) e `tag < 3` verdadeiro --
+//ou seja exatamente o tag 1, o slide cantado. Entao liturgia gravada antes
+//desta chave existir continua abrindo igual, sem migracao nenhuma.
+//
+//O acLetra (tag 6) NAO e modo: ele nao e um jeito de abrir a musica, e ja tem
+//botao proprio na faixa de acoes. Valor que caia nele volta ao padrao.
+function ModoDoParam(const v: string): TAcaoItem;
+
+//O valor a gravar na chave. Vazio para o padrao, porque campo vazio nao e
+//gravado (TStringList.Values[x] := '' apaga a entrada) e assim o arquivo de
+//quem nao mexeu no modo continua sem a chave.
+function ParamDoModo(modo: TAcaoItem): string;
+
+//A tag ao lado do nome aparece SO quando o modo nao e o padrao: item comum
+//fica sem tag, e a tag passa a significar "atencao, este abre diferente".
+function MostraTagDoModo(const tipo: string; modo: TAcaoItem): Boolean;
 
 implementation
 
@@ -212,6 +243,27 @@ end;
 function PossiveisDaMusica: TAcoesItem;
 begin
   Result := PossiveisDoAcervo;
+end;
+
+function ModoDoParam(const v: string): TAcaoItem;
+begin
+  if not AcaoDoTag(StrToIntDef(Trim(v), 0), Result) then
+    Result := MODO_PADRAO
+  else if (Result = acLetra) then
+    Result := MODO_PADRAO;
+end;
+
+function ParamDoModo(modo: TAcaoItem): string;
+begin
+  if (modo = MODO_PADRAO) or (modo = acLetra) then
+    Result := ''
+  else
+    Result := IntToStr(TagDaAcao(modo));
+end;
+
+function MostraTagDoModo(const tipo: string; modo: TAcaoItem): Boolean;
+begin
+  Result := EhMusica(tipo) and (modo <> MODO_PADRAO) and (modo <> acLetra);
 end;
 
 end.

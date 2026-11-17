@@ -255,6 +255,7 @@
         <DCCReference Include="ui\musicas\uListaMusicas.pas"/>
         <DCCReference Include="ui\musicas\uGradeMusicas.pas"/>
         <DCCReference Include="ui\liturgia\uItensLiturgia.pas"/>
+        <DCCReference Include="ui\liturgia\uTiposItem.pas"/>
         <DCCReference Include="ui\liturgia\uListaLiturgia.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
