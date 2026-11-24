@@ -43,7 +43,15 @@ uses
   DelphiZXingQRCode in 'components\DelphiZXingQRCode\DelphiZXingQRCode.pas',
   fmQRCode in 'fmQRCode.pas',
   uInstanciaUnica in 'uInstanciaUnica.pas',
-  uArquivosWeb in 'uArquivosWeb.pas';
+  uArquivosWeb in 'uArquivosWeb.pas',
+  uTema in 'ui\uTema.pas',
+  uControles in 'ui\uControles.pas',
+  uBarraRolagem in 'ui\uBarraRolagem.pas',
+  uJanela in 'ui\uJanela.pas',
+  uMenuMusicas in 'ui\musicas\uMenuMusicas.pas',
+  uItensLiturgia in 'ui\liturgia\uItensLiturgia.pas',
+  uTiposItem in 'ui\liturgia\uTiposItem.pas',
+  uListaLiturgia in 'ui\liturgia\uListaLiturgia.pas';
 
 {$R *.res}
 

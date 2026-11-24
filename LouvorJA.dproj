@@ -252,6 +252,14 @@
         <DCCReference Include="fmQRCode.pas"/>
         <DCCReference Include="uInstanciaUnica.pas"/>
         <DCCReference Include="uArquivosWeb.pas"/>
+        <DCCReference Include="ui\uTema.pas"/>
+        <DCCReference Include="ui\uControles.pas"/>
+        <DCCReference Include="ui\uBarraRolagem.pas"/>
+        <DCCReference Include="ui\uJanela.pas"/>
+        <DCCReference Include="ui\musicas\uMenuMusicas.pas"/>
+        <DCCReference Include="ui\liturgia\uItensLiturgia.pas"/>
+        <DCCReference Include="ui\liturgia\uTiposItem.pas"/>
+        <DCCReference Include="ui\liturgia\uListaLiturgia.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
