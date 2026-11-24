@@ -105,7 +105,16 @@ type
     glReproduzirTodas,
     glProjetar,
     glSetaBaixo,
-    glBloco);          //a divisoria: lista com marcador
+    glBloco,           //a divisoria: lista com marcador
+    //Inserir item ACIMA / ABAIXO deste, no menu de contexto da liturgia.
+    //
+    //NAO reaproveitam o glSetaBaixo acima: aquele e o marcador de "tem menu
+    //suspenso" do TBotaoChato, e mesmo desenho para coisas diferentes
+    //confunde -- o mesmo argumento que ja separou a notaDupla da `nota`.
+    //Estes levam a BARRA do lado para onde o item vai, que e o que diz
+    //"entra aqui" em vez de so "para cima".
+    glItemAcima,
+    glItemAbaixo);
 
   TAlinhaTexto = (alinEsquerda, alinCentro, alinDireita);
 
@@ -733,6 +742,32 @@ begin
         itemLista(3);
         itemLista(10);
         itemLista(17);
+      end;
+
+    glItemAcima, glItemAbaixo:
+      begin
+        //CANETA LIGADA na mesma cor, e nao psClear: a haste tem 4 unidades de
+        //largura, e com psClear o GDI preenche a figura menos a borda -- do
+        //tamanho exato que sumiu quando a cabeca da nota foi desenhada assim.
+        cv.Pen.Style := psSolid;
+        cv.Pen.Width := esp(1);
+        cv.Pen.Color := cor;
+        cv.Brush.Style := bsSolid;
+        cv.Brush.Color := cor;
+
+        if (glifo = glItemAcima) then
+        begin
+          //A barra em cima: e para la que o item novo vai.
+          cv.Rectangle(px(4), py(2), px(20), py(5));
+          cv.Rectangle(px(10), py(12), px(14), py(22));
+          cv.Polygon([pt(5, 13), pt(19, 13), pt(12, 7)]);
+        end
+        else
+        begin
+          cv.Rectangle(px(4), py(19), px(20), py(22));
+          cv.Rectangle(px(10), py(2), px(14), py(12));
+          cv.Polygon([pt(5, 11), pt(19, 11), pt(12, 17)]);
+        end;
       end;
   end;
 

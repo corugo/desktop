@@ -79,6 +79,21 @@ const
   //lit_modItem_btedit usa o DM.ico_16x16.
   ICONE_EDITAR_16 = 16;
 
+  //Os do MENU DE CONTEXTO, tambem no ico_24x24 -- ver o litMenu.
+  //
+  //NAO sao os mesmos numeros do ico_16x16, que e a lista que todos os outros
+  //popups do programa usam: as duas listas tem 109 imagens cada e sao
+  //conjuntos DIFERENTES (no 16x16 o 44 nao e o mais, e o 1 nao e o X). O menu
+  //da liturgia usa a de 24 porque as seis acoes de musica so existem la, e
+  //elas tem de ser os MESMOS icones da faixa de acoes da linha.
+  //
+  //Para conferir indice sem adivinhar: ferramentas/folha-icones.ps1 monta uma
+  //folha rotulada da lista pedida, extraindo os PNG do dmComponentes.dfm.
+  ICONE_ADICIONAR = 44;   //o mais azul
+  ICONE_EDITAR    = 5;    //o lapis
+  ICONE_ABRIR     = 8;    //o play azul
+  ICONE_REMOVER   = 1;    //o X vermelho
+
   //Alturas do .dfm de hoje: item comum 56, divisoria 36 com 20 de respiro em
   //cima (era Margins.Top).
   ALTURA_ITEM       = 56;

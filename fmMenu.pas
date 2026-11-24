@@ -6474,6 +6474,17 @@ end;
   Os rótulos de "Abrir" saem do NomeDaAcao/TagDaAcao do uMenuMusicas, os
   mesmos do seletor de modo do diálogo, da tag na lista e da dica dos seis
   ícones. Quatro lugares, um texto -- nenhuma string de rótulo é escrita aqui.
+
+  OS ÍCONES vêm do DM.ico_24x24, e não do ico_16x16 que os outros popups do
+  programa usam. Não é desalinhamento: os seis de "Abrir" têm de ser os MESMOS
+  da faixa de ações da linha, e aqueles índices (IconeDaAcao) são da lista de
+  24 -- as duas listas têm 109 imagens cada e são conjuntos DIFERENTES, então
+  reaproveitar o índice na outra mostraria o ícone errado.
+
+  As duas setas de "Item acima/abaixo" são GLIFO DESENHADO e não ícone: a
+  ico_24x24 tem a seta para baixo e não tem a de cima, e um par em que metade
+  é PNG colorido e metade é desenho ficaria torto. Desenhadas, as duas saem na
+  cor do tema. É a mesma decisão da alça de arrastar e do tique do check.
 }
 procedure TfmIndex.litMenu(Sender: TObject; indice: Integer;
   const tela: TPoint);
@@ -6482,6 +6493,7 @@ var
   it: TItemLiturgia;
   ac: TAcaoItem;
   sub, mi: TMenuItem;
+  mig: TItemMenuGlifo;
 begin
   lista := TListaLiturgia(Sender);
 
@@ -6498,6 +6510,9 @@ begin
   begin
     menuLiturgia := TPopupMenu.Create(Self);
     menuLiturgia.Name := 'menuLiturgia';
+    //Quem desenha é o TemaPopup, que lê Images do próprio menu -- o caminho
+    //padrão do TMenu, igual no LCL.
+    menuLiturgia.Images := DM.ico_24x24;
   end;
 
   //Remontado a cada abertura: o conteúdo depende do tipo do item e de haver
@@ -6507,20 +6522,24 @@ begin
 
   sub := TMenuItem.Create(menuLiturgia);
   sub.Caption := 'Adicionar';
+  sub.ImageIndex := ICONE_ADICIONAR;
   menuLiturgia.Items.Add(sub);
 
-  mi := TMenuItem.Create(menuLiturgia);
-  mi.Caption := 'Item acima';
-  mi.OnClick := litMenuAdicionaAcima;
-  sub.Add(mi);
+  mig := TItemMenuGlifo.Create(menuLiturgia);
+  mig.Caption := 'Item acima';
+  mig.glifo := glItemAcima;
+  mig.OnClick := litMenuAdicionaAcima;
+  sub.Add(mig);
 
-  mi := TMenuItem.Create(menuLiturgia);
-  mi.Caption := 'Item abaixo';
-  mi.OnClick := litMenuAdicionaAbaixo;
-  sub.Add(mi);
+  mig := TItemMenuGlifo.Create(menuLiturgia);
+  mig.Caption := 'Item abaixo';
+  mig.glifo := glItemAbaixo;
+  mig.OnClick := litMenuAdicionaAbaixo;
+  sub.Add(mig);
 
   mi := TMenuItem.Create(menuLiturgia);
   mi.Caption := 'Editar';
+  mi.ImageIndex := ICONE_EDITAR;
   mi.OnClick := litMenuEditar;
   menuLiturgia.Items.Add(mi);
 
@@ -6528,6 +6547,7 @@ begin
   begin
     sub := TMenuItem.Create(menuLiturgia);
     sub.Caption := 'Abrir';
+    sub.ImageIndex := ICONE_ABRIR;
     menuLiturgia.Items.Add(sub);
 
     for ac := Low(TAcaoItem) to High(TAcaoItem) do
@@ -6535,6 +6555,9 @@ begin
       mi := TMenuItem.Create(menuLiturgia);
       mi.Caption := NomeDaAcao(ac);
       mi.Tag := TagDaAcao(ac);
+      //O MESMO ícone da faixa de ações da linha, pela mesma função. Dois
+      //desenhos para a mesma ação na mesma tela confundiriam.
+      mi.ImageIndex := IconeDaAcao(ac);
       //Ação indisponível aparece APAGADA, não escondida -- a mesma escolha já
       //feita na lista e no seletor de modo, e pelo mesmo argumento: entrada
       //ausente não distingue "esta música não tem playback" de "ninguém usa
@@ -6556,6 +6579,8 @@ begin
   begin
     mi := TMenuItem.Create(menuLiturgia);
     mi.Caption := 'Editar agendamentos';
+    //O mesmo ícone que o item agendado já mostra na coluna do tipo.
+    mi.ImageIndex := ICONE_AGENDADOS;
     //Sem categoria gravada a entrada fica APAGADA em vez de ausente: abrir a
     //aba filtrada por nada não ajudaria ninguém.
     mi.Enabled := (Trim(lerParam(litMenuIdent, 'id', '', arq_liturgia)) <> '');
@@ -6571,6 +6596,7 @@ begin
 
   mi := TMenuItem.Create(menuLiturgia);
   mi.Caption := 'Remover';
+  mi.ImageIndex := ICONE_REMOVER;
   mi.OnClick := litMenuRemover;
   menuLiturgia.Items.Add(mi);
 
