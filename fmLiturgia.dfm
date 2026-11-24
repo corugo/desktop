@@ -3,8 +3,8 @@ object fLiturgia: TfLiturgia
   Top = 0
   BorderIcons = []
   Caption = 'fLiturgia'
-  ClientHeight = 167
-  ClientWidth = 686
+  ClientHeight = 252
+  ClientWidth = 760
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,6 +15,7 @@ object fLiturgia: TfLiturgia
   OldCreateOrder = False
   Scaled = False
   OnActivate = FormActivate
+  OnCreate = FormCreate
   OnKeyUp = FormKeyUp
   PixelsPerInch = 96
   TextHeight = 13
@@ -359,6 +360,7 @@ object fLiturgia: TfLiturgia
       UseSkinFontColor = True
       BorderStyle = bvNone
       Align = alLeft
+      Visible = False
       Caption = 'Tipo de Item:'
       AutoSize = True
     end
@@ -411,6 +413,7 @@ object fLiturgia: TfLiturgia
       DefaultColor = clWindow
       Text = 'Anota'#231#227'o'
       Align = alLeft
+      Visible = False
       Items.Strings = (
         'Anota'#231#227'o'
         'Arquivo/Diret'#243'rio'
