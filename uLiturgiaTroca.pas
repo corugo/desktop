@@ -74,6 +74,38 @@ const
   );
 
 type
+  //O QUE DIFERENCIA UM DIA DOS OUTROS, num lugar so.
+  //
+  //A guia Avulsa (dia 8) nao e um caso especial do programa: e um dia como os
+  //outros, com propriedades diferentes. A diferenca e que ela mora dentro de um
+  //.llja, e isso tem consequencias -- os arquivos dos itens sao reconstruidos
+  //do pacote, alteracao e regravada nele, item de arquivo nao pode apontar
+  //DIRETORIO (diretorio nao cabe num pacote de arquivos), o seletor de arquivo
+  //abre na pasta do pacote, e ela nao resolve data de culto porque nao e dia da
+  //semana nenhum.
+  //
+  //POR QUE ISTO EXISTE em vez de `if dia = DIA_AVULSA` onde precisar: a resposta
+  //curta e que essa condicional estava em seis lugares, e cada recurso novo da
+  //liturgia acrescentava mais um. Quem escreve a lista desenhada, o caminho de
+  //recarga, o menu de contexto ou a API nao deve precisar saber que existe um
+  //dia 8 -- pergunta a PROPRIEDADE, e um nono dia, se um dia houver, entra aqui
+  //e em lugar nenhum mais. E o mesmo precedente que trouxe PRIMEIRO_DIA e
+  //ULTIMO_DIA para esta unit, no lugar do `for i := 1 to 7` magico.
+  TRegrasDoDia = record
+    //Pertence a semana (1..7)? Falso para a Avulsa.
+    ehDaSemana: Boolean;
+    //Item de arquivo pode apontar para um diretorio?
+    aceitaDiretorio: Boolean;
+    //Os arquivos dos itens vem de um pacote e sao reextraidos sob demanda?
+    reconstroiDoPacote: Boolean;
+    //Alteracao na liturgia deste dia e regravada dentro do pacote?
+    sincronizaNoPacote: Boolean;
+    //O seletor de arquivo abre na pasta do pacote?
+    seletorNaPastaDoPacote: Boolean;
+    //Resolve data de culto (e o que o item agendado usa para achar o arquivo)?
+    temDataDeCulto: Boolean;
+  end;
+
   //Um item da liturgia: as chaves do INI, na ordem em que vieram.
   //
   //Campo que o Delphi nao conhece viaja aqui como chave comum, porque a secao
@@ -191,6 +223,12 @@ function tipoDoJson(const tipoJson: string): string;
 //Dia da semana: 1..7 no INI, 0..6 no JSON.
 function diaParaJson(dia: Integer): Integer;
 function diaDoJson(dia: Integer): Integer;
+
+//As propriedades deste dia. Ver TRegrasDoDia: e aqui que a Avulsa deixa de
+//ser excecao espalhada e passa a ser um dia com propriedades proprias.
+//Dia fora de PRIMEIRO_DIA..ULTIMO_DIA responde como dia da semana, que e o
+//conservador: nenhum tratamento de pacote para numero que nao conhecemos.
+function RegrasDoDia(dia: Integer): TRegrasDoDia;
 
 //O id com o SUFIXO_IDENT_AVULSO no fim. Nao empilha: id que ja termina nele
 //volta como esta, o que importa porque a propria Avulsa e exportavel e os
@@ -483,6 +521,33 @@ end;
 function diaDoJson(dia: Integer): Integer;
 begin
   Result := dia + 1;
+end;
+
+function RegrasDoDia(dia: Integer): TRegrasDoDia;
+begin
+  if (dia = DIA_AVULSA) then
+  begin
+    //A Avulsa mora dentro do .llja. Tudo abaixo decorre disso, e nao de ela
+    //ser "especial": diretorio nao cabe num pacote de arquivos, e o que o
+    //operador muda tem de voltar para o pacote, que e a fonte da guia.
+    Result.ehDaSemana := False;
+    Result.aceitaDiretorio := False;
+    Result.reconstroiDoPacote := True;
+    Result.sincronizaNoPacote := True;
+    Result.seletorNaPastaDoPacote := True;
+    //Nao e dia da semana nenhum, entao nao ha ocorrencia a calcular. O
+    //dataDoDiaLiturgia devolve hoje para ela, pelo mesmo motivo.
+    Result.temDataDeCulto := False;
+  end
+  else
+  begin
+    Result.ehDaSemana := (dia >= PRIMEIRO_DIA) and (dia <= 7);
+    Result.aceitaDiretorio := True;
+    Result.reconstroiDoPacote := False;
+    Result.sincronizaNoPacote := False;
+    Result.seletorNaPastaDoPacote := False;
+    Result.temDataDeCulto := Result.ehDaSemana;
+  end;
 end;
 
 { ------------------------------------------------------------- TItemTroca }
