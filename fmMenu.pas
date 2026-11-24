@@ -19,7 +19,8 @@ uses
   uLiturgiaTroca, uLiturgiaLlja,
   BusinessSkinForm, bsSkinMenus, bsSkinCtrls, bsSkinTabs, bsButtonGroup,
   bsSkinBoxCtrls, bsSkinExCtrls, bsribbon, bsdbctrls, bsSkinShellCtrls,
-  bsSkinGrids, bsDBGrids, bsColorCtrls, bsPngImageList;
+  bsSkinGrids, bsDBGrids, bsColorCtrls, bsPngImageList,
+  uTema, uControles, uItensLiturgia, uListaLiturgia, uMenuMusicas;
   (*"MidasLib" NECESSÁRIA PARA EVITAR ERRO DE ACCESS VIOLATION NO DM.cds*)
 
 const
@@ -656,8 +657,6 @@ type
     lblDoxologiaCate: TbsSkinLabel;
     btErro: TbsSkinButton;
     tsLiturgia: TbsSkinTabSheet;
-    sbLiturgia: TbsSkinScrollBox;
-    bsSkinScrollBar3: TbsSkinScrollBar;
     GridPanel23: TGridPanel;
     lcal_2: TbsSkinSpeedButton;
     lcal_3: TbsSkinSpeedButton;
@@ -674,21 +673,6 @@ type
     bsRibbonDivider17: TbsRibbonDivider;
     bsRibbonDivider19: TbsRibbonDivider;
     bsRibbonDivider21: TbsRibbonDivider;
-    lit_modItem: TbsSkinPanel;
-    lit_modItem_icomus6: TbsPngImageView;
-    lit_modItem_icomus4: TbsPngImageView;
-    lit_modItem_icomus3: TbsPngImageView;
-    lit_modItem_icomus1: TbsPngImageView;
-    lit_modItem_btedit: TbsPngImageView;
-    lit_modItem_divider: TbsRibbonDivider;
-    lit_modItem_btmove: TPanel;
-    lit_modItem_bticon: TPanel;
-    lit_modItem_bticon_img: TbsPngImageView;
-    lit_modItem_checkb: TbsSkinCheckBox;
-    lit_modItem_texto: TbsSkinPanel;
-    lit_modItem_subtitulo: TbsSkinStdLabel;
-    lit_modItem_titulo: TbsSkinStdLabel;
-    lit_modItem_btmove_img: TbsPngImageView;
     mmLiturgia: TbsSkinMemo;
     bsSkinPanel3: TbsSkinPanel;
     bsSkinButton34: TbsSkinButton;
@@ -727,7 +711,6 @@ type
     bsFormatSlidePerso: TbsSkinPanel;
     bsSkinSpeedButton1: TbsSkinSpeedButton;
     rbHinoTipo: TbsSkinRadioGroup;
-    lit_modItem_icomus2: TbsPngImageView;
     bsRibbonGroup71: TbsRibbonGroup;
     GridPanel27: TGridPanel;
     bsSkinStdLabel107: TbsSkinStdLabel;
@@ -944,7 +927,6 @@ type
     bsPngImageView16: TbsPngImageView;
     bsPngImageView17: TbsPngImageView;
     bsPngImageView18: TbsPngImageView;
-    lit_modItem_icomus5: TbsPngImageView;
     gpLiturgiaDes: TGridPanel;
     lbLiturgia: TListBox;
     lbLiturgiaPos: TListBox;
@@ -2017,22 +1999,60 @@ type
     procedure bgDoxologiaCateButtonClicked(Sender: TObject; Index: Integer);
     procedure pnlDoxologiaMusicasClose(Sender: TObject);
     procedure btErroClick(Sender: TObject);
-    procedure move_MouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure move_MouseMove(Sender: TObject; Shift: TShiftState; X,
-      Y: Integer);
-    procedure move_MouseUp(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure PanelColorClick(Sender: TObject);
+    //Monta o controle da lista. Chamado do FormCreate.
+    //Le a paleta do skin e a joga no uTema. Ponto unico.
+    procedure aplicaTemaDaInterface;
+    procedure montaListaLiturgia;
+    //Le os parametros de um item e devolve o modelo dele.
+    function itemDaLiturgia(const item: string;
+      ordem: Integer): TItemLiturgia;
+    function textoDoItemAgendado(const item: string): string;
+    function musicaTemPlayback(id: Integer): Boolean;
+    function musicaDoItemTemPlayback(const item: string): Boolean;
+    //Remonta a lista a partir do lbLiturgia, sem reler a ordem.
+    //PONTO ÚNICO de repintura da liturgia, de propósito: acrescentar item,
+    //apagar, reordenar, trocar de dia e a recarga pela API passam todos por
+    //aqui. Um segundo caminho de recarga divergiria do primeiro -- é o que o
+    //usuário quis evitar desde o primeiro pedido.
+    //
+    //`estrutural` = os índices andaram (item entrou, saiu ou trocou de
+    //lugar). Ver TListaLiturgia.defineItens.
+    procedure desenhaLiturgia(estrutural: Boolean = False);
+    procedure litMenu(Sender: TObject; indice: Integer; const tela: TPoint);
+    procedure fechaMenuLiturgia;
+    function itemDoMenuLiturgia: Integer;
+    procedure adicionaItemLiturgiaEm(destino: Integer);
+    procedure litMenuAdicionaAcima(Sender: TObject);
+    procedure litMenuAdicionaAbaixo(Sender: TObject);
+    procedure litMenuEditar(Sender: TObject);
+    procedure litMenuAbrir(Sender: TObject);
+    procedure litMenuAgendamentos(Sender: TObject);
+    procedure litMenuRemover(Sender: TObject);
+    procedure selecionaCategoriaAgendados(const idCategoria: string);
+    //Recompõe a lista a partir do arquivo. É o que a API chama.
+    function recarregaLiturgia: Boolean;
+    function liturgiaEmOperacao: Boolean;
+    procedure escolheCorDoItemLiturgia(const item: string);
+    procedure marcaItemLiturgia(lista: TListaLiturgia;
+      indice: Integer; marcado: Boolean);
+    //O corpo do antigo lit_modItem_textoClick: executa o item. O tag e
+    //o mesmo de antes -- 0 para o corpo do item, 1..6 para as acoes.
+    procedure executaItemLiturgia(const item: string; tag: Integer);
+    //Os eventos do controle.
+    procedure litAbrirItem(Sender: TObject; indice: Integer);
+    procedure litAcao(Sender: TObject; indice: Integer;
+      acao: TAcaoItem);
+    procedure litEditar(Sender: TObject; indice: Integer);
+    procedure litCor(Sender: TObject; indice: Integer);
+    procedure litMarcar(Sender: TObject; indice: Integer;
+      marcado: Boolean);
+    procedure litMover(Sender: TObject; de, para: Integer);
     procedure tsLiturgiaShow(Sender: TObject);
     procedure carregaLiturgia(semana: Integer);
     procedure carregaItemLiturgia(item: string;ordem: Integer = 0);
     procedure apagaItemLiturgia(item: string);
     procedure salvaItensLiturgia();
     function CopyComponent(Component,AParent: TComponent; NewComponentName: String): TComponent;
-    procedure lit_modItem_checkbClick(Sender: TObject);
-    procedure lit_modItem_bteditClick(Sender: TObject);
-    procedure lit_modItem_textoClick(Sender: TObject);
     procedure bsSkinButton34Click(Sender: TObject);
     procedure bsRibbon1Buttons5Click(Sender: TObject);
     procedure bsRibbon1Buttons0Click(Sender: TObject);
@@ -2093,7 +2113,8 @@ type
     function openDialog(tipo:string = '';filtros:string = '';param:string = '';multiplos:boolean = False;diretorio_inicial:string = '';titulo_dialog: string = '';nome_arquivo:string = ''):string;
     function saveDialog(tipo:string = '';filtros:string = '';param:string = '';diretorio_inicial:string = '';titulo_dialog: string = '';nome_arquivo:string = ''):string;
     function pastaInicialSeletorLiturgia: string;
-    function liturgiaAvulsaAberta: Boolean;
+    function regrasDoDiaAberto: TRegrasDoDia;
+
     procedure bsSkinButton43Click(Sender: TObject);
     procedure bsAppMenu1Items7Click(Sender: TObject);
     procedure btExecSQLClick(Sender: TObject);
@@ -2238,9 +2259,9 @@ type
     bass_player: HSTREAM;
     bass_escsb: HSTREAM;
     arquivo_escsb: string;
-    move_x,move_y:integer;
-    move_panel: TPanel;
-    move: Boolean;
+    //A lista da liturgia: um controle desenhado, no lugar do TbsSkinScrollBox
+    //com um painel clonado por item. Criado no FormCreate.
+    listaLiturgia: TListaLiturgia;
     FLogChamadas: Integer;  // contador para checagem de truncamento do louvorja.log
     arquivo_recebido: string;  // caminho enviado por outra instância (WM_COPYDATA)
     //Pacote .llja aberto pelo Windows nesta sessão. Vazio = a guia Avulsa
@@ -2249,6 +2270,19 @@ type
     //Trava de reentrância: a sincronização grava na liturgia, e gravar na
     //liturgia chama a sincronização.
     sincronizandoAvulsa: Boolean;
+    //O menu de contexto da lista de itens da liturgia. Ver litMenu.
+    menuLiturgia: TPopupMenu;
+    //O IDENT do item que o menu aponta -- nunca o índice, porque o menu pode
+    //ficar aberto durante uma recarga. Ver litMenu.
+    litMenuIdent: string;
+    //Profundidade de operação de liturgia em curso. Ver
+    //inicioOperacaoLiturgia; é contador e não Boolean para aguentar
+    //aninhamento sem um `fim` desarmar o lote do outro.
+    litOperacaoEmLote: Integer;
+    //A conversao INI -> JSON esta em curso (trava de reentrancia) e ja
+    //falhou nesta sessao. Ver garanteLiturgiaEmJson.
+    convertendoLiturgia: Boolean;
+    conversaoLiturgiaFalhou: Boolean;
     //Pedido de sincronização já postado e ainda não atendido. É o que
     //junta as gravações de uma ação numa regravação só do pacote.
     avulsaPendente: Boolean;
@@ -2306,6 +2340,11 @@ type
     function caminhoLiturgia: string;
     procedure garanteUtf8Liturgia;
     function abreIniLiturgia: TMemIniFile;
+    //Documento da liturgia para LEITURA, reaproveitado. Quem chama NAO
+    //libera. Toda ESCRITA continua usando o abreIniLiturgia acima.
+    function liturgiaParaLeitura: TCustomIniFile;
+    function seloLiturgia: string;
+    procedure invalidaCacheLiturgia;
     function dataDoDiaLiturgia(const diaSemana: string): TDateTime;
     function caminhoLiturgiaJson: string;
     function leTextoDeArquivo(const caminho: string): string;
@@ -2324,8 +2363,13 @@ type
     procedure limpaDiaAvulsa;
     procedure carregaPacoteAvulsa(const origem: string; sessao: Boolean);
     procedure sincronizaAvulsaNoPacote(atualizaTela: Boolean = True);
+    //O funil de "o conteudo da liturgia mudou": converte e sincroniza.
+    procedure liturgiaAlterada;
+    procedure garanteLiturgiaEmJson;
     procedure pedeSincronizaAvulsa;
     procedure encerraSincronizaAvulsa;
+    procedure inicioOperacaoLiturgia;
+    procedure fimOperacaoLiturgia;
     procedure abreLljaExterno(const arq: string);
     function caminhoAbsolutoItemLiturgia(const dir, dirInfo: string): string;
     procedure converteItemAgendadoParaArquivo(it: TItemTroca; dia: Integer;
@@ -2366,6 +2410,14 @@ type
     arq_liturgia: string;
     FLitClipboard: TStringList;
     FLitClipboardSemana: Integer;
+    //CACHE DE LEITURA da liturgia e o selo do arquivo que ele representa.
+    //Ver liturgiaParaLeitura: cada lerParam relia e reparseava o arquivo
+    //inteiro para pegar UMA chave.
+    FLitCache: TMemIniFile;
+    FLitSelo: string;
+    //O itensAgendados.xml ja foi lido nesta montagem da lista. Ver
+    //textoDoItemAgendado.
+    agendadosLidosNestaCarga: Boolean;
     senha_bd: string;
 
     externo: Boolean;
@@ -2471,6 +2523,8 @@ begin
   DragAcceptFiles(Self.Handle, True);
   FLitClipboard := TStringList.Create;
   FLitClipboardSemana := 0;
+
+  montaListaLiturgia;
 end;
 
 procedure TfmIndex.FormDestroy(Sender: TObject);
@@ -2485,6 +2539,7 @@ begin
   encerraSincronizaAvulsa;
 
   RecursiveDelete(dir_temp);
+  invalidaCacheLiturgia;
   FreeAndNil(FLitClipboard);
 end;
 
@@ -5715,21 +5770,6 @@ begin
 
 end;
 
-procedure TfmIndex.PanelColorClick(Sender: TObject);
-var
-  Panel: TPanel;
-begin
-  if Sender is TPanel
-    then Panel := TPanel(TPanel(Sender))
-    else Panel := TPanel(TPanel(Sender).Parent);
-
-  DM.ColorDialog.Color := Panel.Color;
-  DM.ColorDialog.Execute;
-  Panel.Color := DM.ColorDialog.Color;
-
-  gravaParam(Panel.Parent.Name, 'cor', ColorToString(DM.ColorDialog.Color), arq_liturgia);
-end;
-
 procedure TfmIndex.pnlfmBarraTituloFormDblClick(Sender: TObject);
 begin
   btwsMaximizedClick(Sender);
@@ -6356,236 +6396,686 @@ begin
   ogFavoritos.ItemIndex := i;
 end;
 
-procedure TfmIndex.carregaItemLiturgia(item: string; ordem: integer);
-var
-  i: integer;
-  tipo,subtipo: string;
-  panel,panel2: TPanel;
-  image: TbsPngImageView;
-  checkbox: TbsSkinCheckBox;
-  slabel: TbsSkinStdLabel;
-  pb: Boolean;
+//Le a paleta do skin ativo e a joga no uTema, para as telas desenhadas
+//seguirem o tema do programa.
+//
+//PONTO UNICO, e isso e o que importa: as cores do uTema sao variaveis
+//GLOBAIS, entao quem aplicava mandava na aparencia de todo mundo. Antes so o
+//construtor do fListaMusica aplicava -- e a consequencia era que a liturgia
+//ficava ESCURA (os padroes escritos no uTema) enquanto o programa e claro, e
+//passava a ficar certa se o operador tivesse aberto uma coletanea antes. A
+//aparencia dependia da ordem em que as telas foram abertas.
+//
+//Chamado do cbLayoutChange, que e o unico lugar onde o skin muda -- e que
+//roda TAMBEM no startup, porque o fmIniciando atribui cbLayout.ItemIndex e
+//atribuir ItemIndex em combo skinned dispara o OnChange (secao 3 do
+//CLAUDE.md). Ou seja: a paleta esta aplicada antes de qualquer tela aparecer,
+//e trocar de skin leva as listas junto.
+//
+//E o unico ponto do codigo novo que toca no BusinessSkinForm, e toca so para
+//ler numeros: o uTema continua sem conhece-lo.
+procedure TfmIndex.aplicaTemaDaInterface;
 begin
-  tipo := lerParam(item, 'tipo', '', arq_liturgia);
-  subtipo := lerParam(item, 'subtipo', '', arq_liturgia);
+  if (DM = nil) or (DM.bsSkinData1 = nil) or
+     (DM.bsSkinData1.SkinColors = nil) then
+    Exit;
 
-  panel := TPanel(FindComponent(item));
-  if Assigned(Panel) then
+  AplicaPaleta(
+    DM.bsSkinData1.SkinColors.cBtnFace,        //fundo atras dos itens
+    DM.bsSkinData1.SkinColors.cWindow,         //fundo de cada item
+    DM.bsSkinData1.SkinColors.cWindowText,     //texto
+    DM.bsSkinData1.SkinColors.cHighLight,      //linha selecionada
+    DM.bsSkinData1.SkinColors.cHighLightText,  //texto dentro dela
+    DM.bsSkinData1.SkinColors.cBtnShadow,      //separador e trilho
+    DM.bsSkinData1.SkinColors.cHighLight);     //barra do item no ar
+
+  //A lista da liturgia le as cores na hora de pintar, entao basta invalidar.
+  if (listaLiturgia <> nil) then
+    listaLiturgia.Invalidate;
+end;
+
+//A lista da liturgia, montada em codigo. Substitui o sbLiturgia
+//(TbsSkinScrollBox) com um painel clonado por item -- ver o cabecalho do
+//uListaLiturgia para o porque.
+procedure TfmIndex.montaListaLiturgia;
+begin
+  listaLiturgia := TListaLiturgia.Create(Self);
+  listaLiturgia.Parent := tsLiturgia;
+  listaLiturgia.Align := alClient;
+  listaLiturgia.imagens := DM.ico_24x24;
+  //O lapis de editar e o unico icone que vem do ico_16x16.
+  listaLiturgia.imagens16 := DM.ico_16x16;
+  listaLiturgia.OnAbrirItem := litAbrirItem;
+  listaLiturgia.OnAcao := litAcao;
+  listaLiturgia.OnEditar := litEditar;
+  listaLiturgia.OnCor := litCor;
+  listaLiturgia.OnMarcar := litMarcar;
+  listaLiturgia.OnMover := litMover;
+  listaLiturgia.OnMenu := litMenu;
+end;
+
+{
+  O MENU DE CONTEXTO da lista de itens.
+
+  Mora aqui e não no TListaLiturgia porque as ações são do form: é o mesmo
+  arranjo do menu de músicas (regra 5c), e é o que mantém a lista sem conhecer
+  TPopupMenu -- quando a janela unificada chegar, o controle não é tocado.
+
+  É um TPopupMenu comum, vestido pelo TemaPopup do uControles. TPopupMenu e
+  TMenuItem existem iguais no LCL, então não há controle novo a escrever: o
+  único pedaço que o tema não alcança é a borda, que é do sistema, e isso já
+  foi aceito no menu de músicas.
+
+  GUARDA O IDENT DO ITEM, NÃO O ÍNDICE. O TrackPopupMenu roda o próprio laço
+  de mensagens, então uma recarga pela API é processada com o menu na tela: se
+  o alvo fosse a posição, "Remover" apagaria OUTRO item. Ao clicar, o ident é
+  reresolvido; item que saiu da lista não aciona nada.
+
+  Os rótulos de "Abrir" saem do NomeDaAcao/TagDaAcao do uMenuMusicas, os
+  mesmos do seletor de modo do diálogo, da tag na lista e da dica dos seis
+  ícones. Quatro lugares, um texto -- nenhuma string de rótulo é escrita aqui.
+}
+procedure TfmIndex.litMenu(Sender: TObject; indice: Integer;
+  const tela: TPoint);
+var
+  lista: TListaLiturgia;
+  it: TItemLiturgia;
+  ac: TAcaoItem;
+  sub, mi: TMenuItem;
+begin
+  lista := TListaLiturgia(Sender);
+
+  if (indice < 0) or (indice >= lista.quantidade) then
+    Exit;
+
+  litMenuIdent := lista.identDoItem(indice);
+  if (litMenuIdent = '') then
+    Exit;
+
+  it := itemDaLiturgia(litMenuIdent, indice + 1);
+
+  if (menuLiturgia = nil) then
   begin
-    for i := pred(panel.ControlCount) downto 0 do
+    menuLiturgia := TPopupMenu.Create(Self);
+    menuLiturgia.Name := 'menuLiturgia';
+  end;
+
+  //Remontado a cada abertura: o conteúdo depende do tipo do item e de haver
+  //playback, e remontar 3 a 10 TMenuItem é mais simples e mais barato que
+  //esconder e mostrar.
+  menuLiturgia.Items.Clear;
+
+  sub := TMenuItem.Create(menuLiturgia);
+  sub.Caption := 'Adicionar';
+  menuLiturgia.Items.Add(sub);
+
+  mi := TMenuItem.Create(menuLiturgia);
+  mi.Caption := 'Item acima';
+  mi.OnClick := litMenuAdicionaAcima;
+  sub.Add(mi);
+
+  mi := TMenuItem.Create(menuLiturgia);
+  mi.Caption := 'Item abaixo';
+  mi.OnClick := litMenuAdicionaAbaixo;
+  sub.Add(mi);
+
+  mi := TMenuItem.Create(menuLiturgia);
+  mi.Caption := 'Editar';
+  mi.OnClick := litMenuEditar;
+  menuLiturgia.Items.Add(mi);
+
+  if EhMusica(it.tipo) then
+  begin
+    sub := TMenuItem.Create(menuLiturgia);
+    sub.Caption := 'Abrir';
+    menuLiturgia.Items.Add(sub);
+
+    for ac := Low(TAcaoItem) to High(TAcaoItem) do
     begin
-      try
-        if (panel.Controls[i].Visible) and (panel.Controls[i].Tag <> 9999)
-          then panel.Controls[i].Destroy;
-      except
-        //
-      end;
+      mi := TMenuItem.Create(menuLiturgia);
+      mi.Caption := NomeDaAcao(ac);
+      mi.Tag := TagDaAcao(ac);
+      //Ação indisponível aparece APAGADA, não escondida -- a mesma escolha já
+      //feita na lista e no seletor de modo, e pelo mesmo argumento: entrada
+      //ausente não distingue "esta música não tem playback" de "ninguém usa
+      //esta opção".
+      //
+      //"Letra da música" ENTRA aqui, embora o seletor de modo do diálogo a
+      //exclua de propósito. Não é inconsistência: o seletor responde "como
+      //este item abre por padrão", e letra não é um jeito de abrir; o menu
+      //responde "faça isto agora", e aí ela cabe. Não "consertar" igualando
+      //os dois.
+      mi.Enabled := (ac in it.acoes);
+      mi.OnClick := litMenuAbrir;
+      sub.Add(mi);
     end;
-  end
-  else
-  begin
-    panel := TPanel(CopyComponent(lit_modItem,sbLiturgia,item));
-    panel.OnClick := lit_modItem.OnClick;
-
-    panel2 := TPanel(CopyComponent(lit_modItem_btmove,panel,item+'_btmove'));
-    panel2.OnMouseDown := lit_modItem_btmove.OnMouseDown;
-    panel2.OnMouseMove := lit_modItem_btmove.OnMouseMove;
-    panel2.OnMouseUp := lit_modItem_btmove.OnMouseUp;
-    panel2.Visible := not cbBloqItens.Checked;
-    image := TbsPngImageView(CopyComponent(lit_modItem_btmove_img,panel2,item+'_btmove_img'));
-    image.OnMouseDown := lit_modItem_btmove_img.OnMouseDown;
-    image.OnMouseMove := lit_modItem_btmove_img.OnMouseMove;
-    image.OnMouseUp := lit_modItem_btmove_img.OnMouseUp;
-    image := TbsPngImageView(CopyComponent(lit_modItem_btedit,panel,item+'_btedit'));
-    image.OnClick := lit_modItem_btedit.OnClick;
-    image.Visible := not cbBloqItens.Checked;
-    CopyComponent(lit_modItem_divider,panel,item+'_divider');
   end;
 
-  if (tipo <> 'categoria') then
+  if SameText(it.tipo, TIPO_AGENDADOS) or
+     SameText(it.tipo, TIPO_AGENDADOS_LEGADO) then
   begin
-    panel2 := TPanel(CopyComponent(lit_modItem_bticon,panel,item+'_bticon'));
-    panel2.OnClick := lit_modItem_bticon.OnClick;
-    panel2.Color := StringToColor(lerParam(item, 'cor', '$004F0000', arq_liturgia));
-    image := TbsPngImageView(CopyComponent(lit_modItem_bticon_img,panel2,item+'_bticon_img'));
-    image.OnClick := lit_modItem_bticon_img.OnClick;
-    panel2 := TPanel(CopyComponent(lit_modItem_texto,panel,item+'_texto'));
-    panel2.OnClick := lit_modItem_texto.OnClick;
-    slabel := TbsSkinStdLabel(CopyComponent(lit_modItem_subtitulo,panel2,item+'_subtitulo'));
-    slabel.OnClick := lit_modItem_subtitulo.OnClick;
-    if (tipo = 'itensagendados') then
-    begin
-      slabel.Caption := '';
-      if not DM.cdsItensAgendados.Active then
-      begin
-        DM.cdsItensAgendados.CreateDataSet;
-        DM.cdsItensAgendados.IndexName := '';
-        DM.cdsItensAgendados.IndexFieldNames := 'DATA';
-        DM.cdsItensAgendados.LogChanges := False;
-      end;
-
-      if (FileExists(dir_dados + 'itensAgendados.xml')) then
-        DM.cdsItensAgendados.LoadFromFile(dir_dados + 'itensAgendados.xml');
-      DM.cdsItensAgendados.Open;
-
-      DM.cdsItensAgendados.Filtered := false;
-      if (DM.cdsItensAgendados.Locate('CATEGORIA;DATA', VarArrayOf([lerParam(item, 'id', '', arq_liturgia),dataDoDiaLiturgia(loadCol.Strings.Values['LITURGIA:SEMANA'])]), []))
-        then slabel.Caption := 'Arquivo '+DM.cdsItensAgendados.FieldByName('ARQUIVO').AsString
-        else slabel.Caption := 'Não há arquivo agendado para esta data!';
-    end
-    else slabel.Caption := lerParam(item, 'subitem', '', arq_liturgia);
-    slabel := TbsSkinStdLabel(CopyComponent(lit_modItem_titulo,panel2,item+'_titulo'));
-    slabel.OnClick := lit_modItem_titulo.OnClick;
-    slabel.Caption := lerParam(item, 'item', '', arq_liturgia);
-    slabel.Align := alTop;
-    checkbox := TbsSkinCheckBox(CopyComponent(lit_modItem_checkb,panel,item+'_checkb'));
-    checkbox.OnClick := lit_modItem_checkb.OnClick;
-    checkbox.Checked := (lerParam(item, 'checked', '', arq_liturgia) = FormatDateTime('dd/mm/yyyy',Now()));
-    panel.AlignWithMargins := false;
-    panel.Height := 56;
-  end
-  else
-  begin
-    panel2 := TPanel(CopyComponent(lit_modItem_bticon,panel,item+'_bticon'));
-    panel2.OnClick := PanelColorClick;
-    panel2.Color := StringToColor(lerParam(item, 'cor', '$004F0000', arq_liturgia));
-    panel2.Align := alClient;
-//    panel.Color := StringToColor(lerParam(item, 'cor', '$004F0000', arq_liturgia));
-    panel.Height := 36;
-    panel.AlignWithMargins := True;
-    panel.Margins.Top := 20;
-    panel.Margins.Left := 0;
-    panel.Margins.Right := 0;
-    panel.Margins.Bottom := 0;
-    //panel3 := TPanel(CopyComponent(lit_modItem_texto,panel2,item+'_texto'));
-    //panel3.OnClick := lit_modItem_texto.OnClick;
-    slabel := TbsSkinStdLabel(CopyComponent(lit_modItem_titulo,panel2,item+'_titulo'));
-    slabel.Align := alClient;
-    slabel.UseSkinColor := false;
-    slabel.Font.Color := clWhite;
-//    slabel.OnClick := lit_modItem_titulo.OnClick;
-    slabel.Caption := lerParam(item, 'item', '', arq_liturgia);
-    slabel.Font.Color := clWhite;
-    slabel.Align := alClient;
-    slabel.Alignment := taCenter;
-    slabel.Layout := tlCenter;
+    mi := TMenuItem.Create(menuLiturgia);
+    mi.Caption := 'Editar agendamentos';
+    //Sem categoria gravada a entrada fica APAGADA em vez de ausente: abrir a
+    //aba filtrada por nada não ajudaria ninguém.
+    mi.Enabled := (Trim(lerParam(litMenuIdent, 'id', '', arq_liturgia)) <> '');
+    mi.OnClick := litMenuAgendamentos;
+    menuLiturgia.Items.Add(mi);
   end;
 
-  if (pnlModDes.Visible)
-    then slabel.Caption := slabel.Caption + ' | ' + item + ' ['+inttostr(ordem)+']';
+  //Remover fica POR ÚLTIMO e abaixo de um separador: ação destrutiva colada em
+  //"Editar" é erro de clique esperando acontecer.
+  mi := TMenuItem.Create(menuLiturgia);
+  mi.Caption := '-';
+  menuLiturgia.Items.Add(mi);
 
-  if (tipo = 'musica') then
+  mi := TMenuItem.Create(menuLiturgia);
+  mi.Caption := 'Remover';
+  mi.OnClick := litMenuRemover;
+  menuLiturgia.Items.Add(mi);
+
+  TemaPopup.aplica(menuLiturgia.Items);
+  menuLiturgia.Popup(tela.X, tela.Y);
+end;
+
+//Fecha o menu de contexto, se estiver aberto.
+//
+//Chamado pela repintura ESTRUTURAL: menu cujo alvo pode ter trocado de lugar
+//não deve continuar na tela esperando um clique. A correção de verdade contra
+//o clique errado é a conferência do ident nos handlers; isto é o que evita o
+//operador clicar em algo que mudou debaixo dele.
+procedure TfmIndex.fechaMenuLiturgia;
+begin
+  if (menuLiturgia <> nil) then
+    menuLiturgia.CloseMenu;
+end;
+
+//O item que o menu de contexto apontava, reresolvido AGORA.
+//
+//Devolve -1 quando ele não está mais na lista -- o que acontece de verdade:
+//o menu pode ter ficado aberto durante uma recarga pela API.
+function TfmIndex.itemDoMenuLiturgia: Integer;
+begin
+  Result := -1;
+
+  if (litMenuIdent = '') or (listaLiturgia = nil) then
+    Exit;
+
+  Result := lbLiturgia.Items.IndexOf(litMenuIdent);
+end;
+
+{
+  Acrescentar item ACIMA ou ABAIXO do item apontado.
+
+  O btAddClick do fmLiturgia só sabe acrescentar no FIM da ordem, e ele é uma
+  rotina de ~170 linhas com vários caminhos de saída -- o pior lugar para
+  pendurar "a posição onde o próximo item deve entrar", porque esse estado
+  precisaria ser limpo em todos eles, cancelar e fechar pelo X incluídos.
+
+  Então aqui não se toca nele: o item nasce no fim e é MOVIDO depois de o
+  diálogo fechar, pelo mesmo caminho que o arraste usa. Cancelar o diálogo não
+  precisa de tratamento nenhum -- nada foi acrescentado, nada se move.
+
+  As duas gravações da ordem ficam dentro do par inicioOperacaoLiturgia /
+  fimOperacaoLiturgia: ver o comentário dele para o que isso garante e para o
+  que deliberadamente NÃO garante.
+}
+procedure TfmIndex.adicionaItemLiturgiaEm(destino: Integer);
+var
+  antes, novo: Integer;
+begin
+  if (destino < 0) then
+    Exit;
+
+  antes := lbLiturgia.Items.Count;
+
+  inicioOperacaoLiturgia;
+  try
+    fIniciando.AppCreateForm(TfLiturgia, fLiturgia);
+    fLiturgia.Caption := 'Adicionar Item';
+    fLiturgia.id := '';
+    fLiturgia.ShowModal;
+
+    //Nada acrescentado (o operador cancelou): nada a mover.
+    if (lbLiturgia.Items.Count <> antes + 1) then
+      Exit;
+
+    //O item novo é o último -- é lá que o btAddClick o põe.
+    novo := lbLiturgia.Items.Count - 1;
+    if (destino >= novo) then
+      Exit;
+
+    lbLiturgia.Items.Move(novo, destino);
+    salvaItensLiturgia;
+  finally
+    //SEMPRE em finally: exceção aqui deixando o lote ligado significaria
+    //pacote nunca mais sincronizado e API recusando recarga pelo resto da
+    //sessão, com o resto do programa parecendo normal.
+    fimOperacaoLiturgia;
+  end;
+
+  //Uma repintura só, e é a MESMA da recarga pela API: acrescentar item e
+  //recarregar, no fim, são a mesma coisa.
+  desenhaLiturgia(True);
+end;
+
+procedure TfmIndex.litMenuAdicionaAcima(Sender: TObject);
+begin
+  adicionaItemLiturgiaEm(itemDoMenuLiturgia);
+end;
+
+procedure TfmIndex.litMenuAdicionaAbaixo(Sender: TObject);
+var
+  i: Integer;
+begin
+  i := itemDoMenuLiturgia;
+  if (i >= 0) then
+    adicionaItemLiturgiaEm(i + 1);
+end;
+
+procedure TfmIndex.litMenuEditar(Sender: TObject);
+begin
+  if (itemDoMenuLiturgia < 0) then
+    Exit;
+
+  fIniciando.AppCreateForm(TfLiturgia, fLiturgia);
+  fLiturgia.Caption := 'Editar Item';
+  fLiturgia.id := litMenuIdent;
+  fLiturgia.ShowModal;
+end;
+
+procedure TfmIndex.litMenuAbrir(Sender: TObject);
+begin
+  if (itemDoMenuLiturgia < 0) then
+    Exit;
+
+  executaItemLiturgia(litMenuIdent, TMenuItem(Sender).Tag);
+end;
+
+{
+  Abre a aba de itens agendados já na categoria configurada neste item.
+
+  CUIDADO com a chave 'id': dentro da seção de um item de liturgia ela é a
+  CATEGORIA do item agendado, NÃO o identificador do item -- esse é o nome da
+  seção. São coisas diferentes com o mesmo nome.
+
+  E o que a aba espera é justamente o ID da categoria, não o nome dela, que é
+  o que o item já guarda: não há tradução a fazer. Não "corrigir" isto para
+  buscar por nome.
+
+  O calendário também é posicionado, e não só a categoria: o registro de item
+  agendado é indexado por categoria E data, então levar só a categoria
+  deixaria o operador no mês certo e no dia de hoje, que não é "dentro do item
+  agendado que está configurado".
+}
+procedure TfmIndex.litMenuAgendamentos(Sender: TObject);
+var
+  idCategoria: string;
+begin
+  if (itemDoMenuLiturgia < 0) then
+    Exit;
+
+  idCategoria := Trim(lerParam(litMenuIdent, 'id', '', arq_liturgia));
+  if (idCategoria = '') then
+    Exit;
+
+  abrePagina(tsItensAgendados);
+
+  //A data sai do dia ABERTO na tela, e aqui isso é o certo: o menu abriu
+  //sobre um item desse dia. Quem recebe o dia por parâmetro -- a exportação
+  //do .llja -- não pode ler este global.
+  MonthCalendar1.Date :=
+    dataDoDiaLiturgia(loadCol.Strings.Values['LITURGIA:SEMANA']);
+
+  selecionaCategoriaAgendados(idCategoria);
+end;
+
+procedure TfmIndex.litMenuRemover(Sender: TObject);
+var
+  i: Integer;
+  nome: string;
+begin
+  i := itemDoMenuLiturgia;
+  if (i < 0) then
+    Exit;
+
+  nome := Trim(lerParam(litMenuIdent, 'item', '', arq_liturgia));
+  if (nome = '') then
+    nome := Trim(lerParam(litMenuIdent, 'subitem', '', arq_liturgia));
+
+  //A confirmação é DAQUI, de propósito: o caminho atual de apagar não
+  //confirma nada -- quem pergunta é o btApagaLitSelClick, e o texto dele é o
+  //do plural ("todos os itens marcados"). O caminho da seleção múltipla fica
+  //intocado; unificar os dois seria mexida fora de escopo.
+  if (Application.MessageBox(
+        PChar('Deseja remover este item da liturgia?' + #13#10#13#10 +
+              IfThen(nome = '', '(sem nome)', nome)),
+        TITULO, mb_yesno + mb_iconquestion) <> 6) then
+    Exit;
+
+  //Reresolvido DE NOVO: a caixa de confirmação roda laço de mensagens, então
+  //uma recarga pela API pode ter chegado enquanto ela estava na tela.
+  if (itemDoMenuLiturgia < 0) then
+    Exit;
+
+  apagaItemLiturgia(litMenuIdent);
+  litMenuIdent := '';
+end;
+
+//O texto do item agendado: o nome do arquivo marcado para a data deste dia.
+//Era um bloco dentro do carregaItemLiturgia.
+function TfmIndex.textoDoItemAgendado(const item: string): string;
+begin
+  Result := 'Nao ha arquivo agendado para esta data!';
+
+  if not DM.cdsItensAgendados.Active then
   begin
-    if (subtipo = 'hasd')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 47
-    else if (subtipo = 'ja')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 46
-    else if (subtipo = 'div')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 45
-    else TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 60;
+    DM.cdsItensAgendados.CreateDataSet;
+    DM.cdsItensAgendados.IndexName := '';
+    DM.cdsItensAgendados.IndexFieldNames := 'DATA';
+    DM.cdsItensAgendados.LogChanges := False;
+  end;
 
-    if lerParam(item, 'musica', '0', arq_liturgia) = '-1'
-      then pb := true
+  //UMA LEITURA POR MONTAGEM DA LISTA, nao uma por item. Este LoadFromFile
+  //rele o XML inteiro, e com varios itens agendados no mesmo dia ele era
+  //pago N vezes para responder N perguntas sobre o MESMO arquivo.
+  //
+  //A trava e zerada pelo desenhaLiturgia antes e depois do laco, entao
+  //chamada SOLTA desta rotina (fora de uma montagem) continua relendo -- o
+  //que importa porque o XML pode ter mudado pela tela de itens agendados.
+  if not agendadosLidosNestaCarga then
+  begin
+    if (FileExists(dir_dados + 'itensAgendados.xml')) then
+      DM.cdsItensAgendados.LoadFromFile(dir_dados + 'itensAgendados.xml');
+    DM.cdsItensAgendados.Open;
+  end;
+
+  DM.cdsItensAgendados.Filtered := False;
+  //A data sai do dataDoDiaLiturgia, NAO da conta antiga
+  //`IncDay(hoje, dia - DayOfWeek(hoje))`, que caia na semana ANTERIOR quando o
+  //dia escolhido ja tinha passado. Esta rotina nasceu de um bloco do
+  //carregaItemLiturgia, e herdou a conta de antes da correcao -- repor a conta
+  //aqui reintroduziria aquele defeito.
+  //CUIDADO com a chave 'id': dentro da secao de um item ela e a CATEGORIA do
+  //item agendado, NAO o identificador do item -- esse e o nome da secao. Sao
+  //coisas diferentes com o mesmo nome.
+  if DM.cdsItensAgendados.Locate('CATEGORIA;DATA',
+    VarArrayOf([lerParam(item, 'id', '', arq_liturgia),
+      dataDoDiaLiturgia(loadCol.Strings.Values['LITURGIA:SEMANA'])]), []) then
+    Result := 'Arquivo ' +
+      DM.cdsItensAgendados.FieldByName('ARQUIVO').AsString;
+end;
+
+//A musica deste item tem playback? E a MESMA regra do menu de musicas
+//(URL_INSTRUMENTAL preenchido), e e ela que decide quais dos seis botoes
+//ficam ativos e quais saem apagados.
+function TfmIndex.musicaTemPlayback(id: Integer): Boolean;
+begin
+  //Sem musica para conferir (escolha na hora, id invalido) a resposta e SIM:
+  //esconder o playback de uma musica que ainda nao se sabe qual e seria
+  //tirar uma opcao legitima. Era assim que o codigo antigo se comportava.
+  if (id <= 0) then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  DM.qrMUSICA.Close;
+  DM.qrMUSICA.ParamByName('ID').Value := id;
+  DM.qrMUSICA.Open;
+
+  if (DM.qrMUSICA.RecordCount <= 0) then
+    Result := True
+  else
+    Result := (DM.qrMUSICA.FieldByName('URL_INSTRUMENTAL').AsString <> '');
+end;
+
+function TfmIndex.musicaDoItemTemPlayback(const item: string): Boolean;
+begin
+  //Escolha na hora grava musica = -1, e o musicaTemPlayback ja trata id <= 0.
+  Result := musicaTemPlayback(
+    StrToIntDef(lerParam(item, 'musica', '0', arq_liturgia), 0));
+end;
+
+function TfmIndex.itemDaLiturgia(const item: string;
+  ordem: Integer): TItemLiturgia;
+begin
+  Result.ident := item;
+  Result.tipo := lerParam(item, 'tipo', '', arq_liturgia);
+  Result.subtipo := lerParam(item, 'subtipo', '', arq_liturgia);
+  Result.titulo := lerParam(item, 'item', '', arq_liturgia);
+  Result.cor := lerParam(item, 'cor', COR_PADRAO, arq_liturgia);
+  Result.marcado := (lerParam(item, 'checked', '', arq_liturgia) =
+    FormatDateTime('dd/mm/yyyy', Now()));
+  Result.subtitulo := '';
+  Result.acoes := [];
+  Result.possiveis := [];
+  Result.modo := MODO_PADRAO;
+
+  if not EhDivisoria(Result.tipo) then
+  begin
+    if SameText(Result.tipo, TIPO_AGENDADOS)
+      or SameText(Result.tipo, TIPO_AGENDADOS_LEGADO) then
+      Result.subtitulo := textoDoItemAgendado(item)
     else
-    begin
-      DM.qrMUSICA.Close;
-      DM.qrMUSICA.ParamByName('ID').Value := StrToInt('0'+lerParam(item, 'musica', '0', arq_liturgia));
-      DM.qrMUSICA.Open;
-      if DM.qrMUSICA.RecordCount <= 0
-        then pb := true
-      else if (DM.qrMUSICA.FieldByName('URL_INSTRUMENTAL').AsString <> '')
-        then pb := True
-        else pb := False;
-    end;
+      Result.subtitulo := lerParam(item, 'subitem', '', arq_liturgia);
 
-    image := TbsPngImageView(CopyComponent(lit_modItem_icomus1,panel,item+'_icomus1'));
-    image.OnClick := lit_modItem_icomus1.OnClick;
-    if pb then
+    if EhMusica(Result.tipo) then
     begin
-      image := TbsPngImageView(CopyComponent(lit_modItem_icomus2,panel,item+'_icomus2'));
-      image.OnClick := lit_modItem_icomus2.OnClick;
+      //As seis colunas aparecem sempre; as que nao se aplicam saem apagadas.
+      //Antes a liturgia ESCONDIA os dois botoes de playback, e coluna vazia
+      //nao distingue "esta musica nao tem playback" de "ninguem usa esta
+      //coluna" -- mesma escolha ja feita no menu de musicas.
+      Result.possiveis := PossiveisDaMusica;
+      Result.acoes := AcoesDaMusica(musicaDoItemTemPlayback(item));
+      Result.modo := ModoDoParam(lerParam(item, CHAVE_MODO, '', arq_liturgia));
     end;
-    image := TbsPngImageView(CopyComponent(lit_modItem_icomus3,panel,item+'_icomus3'));
-    image.OnClick := lit_modItem_icomus3.OnClick;
-    image := TbsPngImageView(CopyComponent(lit_modItem_icomus4,panel,item+'_icomus4'));
-    image.OnClick := lit_modItem_icomus4.OnClick;
-    if pb then
+  end;
+
+  if pnlModDes.Visible then
+    Result.titulo := Result.titulo + ' | ' + item + ' [' + IntToStr(ordem) +
+      ']';
+end;
+
+//Remonta a lista inteira a partir do lbLiturgia, que e a ordem corrente.
+//Custa pouco: nao cria controle nenhum, so le parametro e redesenha.
+procedure TfmIndex.desenhaLiturgia(estrutural: Boolean);
+var
+  i: Integer;
+  itens: TItensLiturgia;
+begin
+  if (listaLiturgia = nil) then
+    Exit;
+
+  //Menu de contexto aberto cujo alvo pode ter trocado de lugar não fica na
+  //tela esperando clique. Ver fechaMenuLiturgia.
+  if estrutural then
+    fechaMenuLiturgia;
+
+  //O itensAgendados.xml e lido UMA vez por montagem, nao uma por item
+  //agendado. Zerado antes E depois: fora daqui, chamada solta do
+  //textoDoItemAgendado continua relendo o XML, que pode ter mudado pela
+  //tela de itens agendados.
+  agendadosLidosNestaCarga := False;
+  try
+    SetLength(itens, lbLiturgia.Items.Count);
+    for i := 0 to lbLiturgia.Items.Count - 1 do
     begin
-      image := TbsPngImageView(CopyComponent(lit_modItem_icomus5,panel,item+'_icomus5'));
-      image.OnClick := lit_modItem_icomus5.OnClick;
+      itens[i] := itemDaLiturgia(lbLiturgia.Items[i], i + 1);
+      agendadosLidosNestaCarga := True;
     end;
-    image := TbsPngImageView(CopyComponent(lit_modItem_icomus6,panel,item+'_icomus6'));
-    image.OnClick := lit_modItem_icomus6.OnClick;
-    TbsPngImageView(FindComponent(item+'_icomus6')).Left := 0;
-    if pb then TbsPngImageView(FindComponent(item+'_icomus5')).Left := 0;
-    TbsPngImageView(FindComponent(item+'_icomus4')).Left := 0;
-    TbsPngImageView(FindComponent(item+'_icomus3')).Left := 0;
-    if pb then TbsPngImageView(FindComponent(item+'_icomus2')).Left := 0;
-    TbsPngImageView(FindComponent(item+'_icomus1')).Left := 0;
-  end
-  else if (tipo = 'site') then
-  begin
-    subtipo := lerParam(item, 'subitem', '', arq_liturgia);
-    if  (Pos('.youtube.',subtipo) > 0)
-     or (Pos('/youtube.',subtipo) > 0)
-     or (Pos('.youtu.be.',subtipo) > 0)
-     or (Pos('/youtu.be.',subtipo) > 0)
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 38
-      else TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 49;
-  end
-  else
-  if (tipo = 'arquivo') then
-  begin
-    if (subtipo = 'dir')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 32
-    else if (subtipo = 'arq')
-      then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 4;
-  end
-  else
-  if (tipo = 'anotacao')
-    then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 63
-  else
-  if (tipo = 'itensagendados')
-    then TbsPngImageView(FindComponent(item+'_bticon_img')).ImageIndex := 83;
+  finally
+    agendadosLidosNestaCarga := False;
+  end;
 
-  if (ordem > 0) then
-    panel.Top := (panel.Height + 20) * (ordem + 3);
+  listaLiturgia.bloqueado := cbBloqItens.Checked;
+  listaLiturgia.defineItens(itens, estrutural);
+end;
 
-  panel.Visible := True;
+{
+  Recompõe a lista a partir do arquivo. É isto que o POST reload da API chama.
+
+  NÃO é um caminho próprio de recarga: relê a ordem do arquivo e chama o mesmo
+  desenhaLiturgia da tela, com a mesma âncora de rolagem e a mesma trava. É o
+  ponto único que o usuário pediu -- acrescentar item e recarregar "no final
+  são o mesmo item".
+
+  Devolve False quando não havia o que recompor (nenhum dia aberto), para a
+  API poder dizer isso em vez de responder um ok genérico mentindo que
+  repintou.
+}
+function TfmIndex.recarregaLiturgia: Boolean;
+begin
+  Result := False;
+
+  if (listaLiturgia = nil) then
+    Exit;
+
+  if (StrToIntDef(loadCol.Strings.Values['LITURGIA:SEMANA'], 0) <= 0) then
+    Exit;
+
+  //A rota existe justamente para refletir alteracao feita POR FORA do
+  //programa. Servir cache aqui seria negar o proposito dela.
+  invalidaCacheLiturgia;
+
+  carregaLiturgia(diaLiturgiaAberto);
+  Result := True;
+end;
+
+//Mantido com a assinatura antiga porque o fmLiturgia chama daqui de fora
+//(btAddClick, duas vezes). Com a lista desenhada nao ha item isolado para
+//remontar: redesenhar tudo e mais barato do que era remontar um painel.
+//
+//ESTRUTURAL: quem chama isto e o btAddClick, ou seja um item ACABOU DE
+//ENTRAR na ordem. A repintura e a mesma da recarga pela API, de proposito --
+//no fim sao a mesma coisa.
+procedure TfmIndex.carregaItemLiturgia(item: string; ordem: integer);
+begin
+  desenhaLiturgia(True);
+end;
+
+//O seletor de cor do item. Serve ao quadrado de cor de qualquer item e ao
+//corpo da divisoria, que era o que o PanelColorClick e o ramo 'categoria' do
+//lit_modItem_textoClick faziam -- em dois lugares, com o mesmo codigo.
+procedure TfmIndex.escolheCorDoItemLiturgia(const item: string);
+begin
+  if (item = '') then
+    Exit;
+
+  try
+    DM.ColorDialog.Color := StringToColor(lerParam(item, 'cor', COR_PADRAO,
+      arq_liturgia));
+  except
+    DM.ColorDialog.Color := StringToColor(COR_PADRAO);
+  end;
+
+  if not DM.ColorDialog.Execute then
+    Exit;
+
+  gravaParam(item, 'cor', ColorToString(DM.ColorDialog.Color), arq_liturgia);
+  desenhaLiturgia;
+end;
+
+{ os eventos da lista }
+
+//OS EVENTOS SAO DA LISTA QUE OS DISPAROU, nao da variavel global: quem diz
+//o indice e o Sender. E o que permite a MESMA logica servir a lista da aba e
+//a do widget flutuante -- duas instancias do mesmo controle (regra 5c).
+//Antes isto lia `listaLiturgia` direto, e o widget exigiria uma copia da
+//tela inteira.
+procedure TfmIndex.litAbrirItem(Sender: TObject; indice: Integer);
+begin
+  //Tag 0 = o corpo do item, igual ao que o _texto fazia.
+  executaItemLiturgia(TListaLiturgia(Sender).identDoItem(indice), 0);
+end;
+
+procedure TfmIndex.litAcao(Sender: TObject; indice: Integer;
+  acao: TAcaoItem);
+begin
+  //Os Tags 1..6 sao os mesmos dos lit_modItem_icomus1..6 de antes, e o
+  //TagDaAcao e o do uMenuMusicas -- nao ha tabela nova.
+  executaItemLiturgia(TListaLiturgia(Sender).identDoItem(indice),
+    TagDaAcao(acao));
+end;
+
+procedure TfmIndex.litEditar(Sender: TObject; indice: Integer);
+begin
+  fIniciando.AppCreateForm(TfLiturgia, fLiturgia);
+  fLiturgia.Caption := 'Alterar Item';
+  fLiturgia.id := TListaLiturgia(Sender).identDoItem(indice);
+  fLiturgia.ShowModal;
+end;
+
+procedure TfmIndex.litCor(Sender: TObject; indice: Integer);
+begin
+  escolheCorDoItemLiturgia(TListaLiturgia(Sender).identDoItem(indice));
+end;
+
+procedure TfmIndex.litMarcar(Sender: TObject; indice: Integer;
+  marcado: Boolean);
+begin
+  marcaItemLiturgia(TListaLiturgia(Sender), indice, marcado);
+end;
+
+//Arrastou um item para outro lugar. O controle diz de onde para onde, em
+//indices -- antes a ordem nova era DEDUZIDA do Top de cada painel, ordenando
+//texto montado com FormatFloat.
+procedure TfmIndex.litMover(Sender: TObject; de, para: Integer);
+begin
+  if (de < 0) or (de >= lbLiturgia.Items.Count) then
+    Exit;
+  if (para < 0) or (para > lbLiturgia.Items.Count) then
+    Exit;
+
+  //'para' e posicao de INSERCAO: tirar o item antes de inserir desloca tudo
+  //que vinha depois dele.
+  if (para > de) then
+    Dec(para);
+  lbLiturgia.Items.Move(de, para);
+
+  salvaItensLiturgia;
+  //ESTRUTURAL: os indices andaram.
+  desenhaLiturgia(True);
+
+  //Deixa selecionado o item onde ele caiu: solto sem realce, nao se ve para
+  //onde ele foi. A rolagem o defineItens ja preserva.
+  TListaLiturgia(Sender).indice := para;
 end;
 
 procedure TfmIndex.carregaLiturgia(semana: Integer);
 var
   itens: TStringList;
-  i: integer;
 begin
   garanteUtf8Liturgia;
 
-  //Sob demanda, so quando a Avulsa e aberta: extrair na abertura do
-  //programa pagaria o custo toda vez, inclusive para quem nao vai usar.
-  if (semana = DIA_AVULSA) then
+  //O que este dia exige antes de ser desenhado. Hoje so a Avulsa pede algo
+  //(reconstruir os arquivos do pacote), e e por isso que a pergunta nao e
+  //"o dia e 8?" e sim "este dia precisa de preparo?" -- ver regrasDoDia.
+  if regrasDoDia(semana).reconstroiDoPacote then
     garanteArquivosAvulsa;
 
   itens := TStringList.Create;
-  itens.Delimiter := ';';
-  itens.DelimitedText := lerParam('Geral', IntToStr(semana), '', arq_liturgia);
+  try
+    itens.Delimiter := ';';
+    itens.DelimitedText := lerParam('Geral', IntToStr(semana), '', arq_liturgia);
 
-  lbLiturgia.Items.Clear;
-  lbLiturgia.Items := itens;
-
-  for i := pred(sbLiturgia.ControlCount) downto 0 do
-  begin
-    if sbLiturgia.Controls[i].Visible
-      then sbLiturgia.Controls[i].Destroy;
+    lbLiturgia.Items.Clear;
+    //O Items := copia, entao a lista pode ser liberada. Antes ela NAO era:
+    //uma TStringList vazava por redesenho da tela.
+    lbLiturgia.Items := itens;
+  finally
+    itens.Free;
   end;
 
   if (lbLiturgia.Items.Count > 0) and
-    (trim(lbLiturgia.Items[lbLiturgia.Items.Count-1]) = '')
-    then lbLiturgia.Items.Delete(lbLiturgia.Items.Count-1);
+    (trim(lbLiturgia.Items[lbLiturgia.Items.Count - 1]) = '') then
+    lbLiturgia.Items.Delete(lbLiturgia.Items.Count - 1);
 
-  for i := 0 to lbLiturgia.Items.Count-1 do
-    carregaItemLiturgia(lbLiturgia.Items[i],i+1);
+  //ESTRUTURAL: a ordem inteira foi relida. Serve a troca de dia e e tambem o
+  //caminho que a recarga pela API usa.
+  desenhaLiturgia(True);
 end;
+
 
 function TfmIndex.IsNumeric(S: string): boolean;
 var
@@ -6921,13 +7411,22 @@ begin
   try
     // Always use abreIniLiturgia for liturgia.ja to ensure UTF-8 and avoid ANSI APIs
     if Arquivo = arq_liturgia then
-      ArqIni := abreIniLiturgia
+    begin
+      //CACHE DE LEITURA: o documento vive no form e NÃO é liberado aqui. Ver
+      //liturgiaParaLeitura -- era este ponto que relia e reparseava o arquivo
+      //inteiro para pegar UMA chave.
+      ArqIni := liturgiaParaLeitura;
+      if (ArqIni <> nil) then
+        vl := ArqIni.ReadString(Grupo, Param, Valor);
+    end
     else
+    begin
       ArqIni := TIniFile.Create(dir + Arquivo);
-    try
-      vl := ArqIni.ReadString(Grupo, Param, Valor);
-    finally
-      ArqIni.Free;
+      try
+        vl := ArqIni.ReadString(Grupo, Param, Valor);
+      finally
+        ArqIni.Free;
+      end;
     end;
   except
     on E: Exception do
@@ -7058,6 +7557,9 @@ procedure TfmIndex.gravaLiturgiaJson(doc: TLiturgiaArq);
 var
   caminho, temp: string;
 begin
+  //Funil de toda gravacao em JSON, inclusive a sincronizacao da Avulsa.
+  invalidaCacheLiturgia;
+
   caminho := caminhoLiturgiaJson;
   temp := caminho + '.tmp';
 
@@ -7075,6 +7577,212 @@ end;
 function TfmIndex.caminhoLiturgia: string;
 begin
   Result := dir_dados + arq_liturgia;
+end;
+
+{
+  Converte a liturgia de INI para JSON quando ela é alterada.
+
+  POR QUE: o JSON de troca passou a ser O formato da liturgia -- é o mesmo
+  arquivo que a exportação gera, que o usuário pode colar em %APPDATA%, e é o
+  manifesto de dentro do .llja. Manter o INI vivo ao lado dele
+  indefinidamente é passivo: dois formatos, dois caminhos de leitura e de
+  gravação, e cada recurso novo precisando funcionar nos dois.
+
+  Até 2026-11-21 a conversão automática era deliberadamente FORA de escopo
+  ("quem está no INI fica no INI até pedir"). Este é o pedir, e é amplo:
+  qualquer alteração na liturgia, em qualquer dia, converte.
+
+  NÃO É UM CONVERSOR NOVO: usa o mesmo copiaDe do TLiturgiaArq que a
+  exportação das configurações já usa. Um segundo conversor divergiria do
+  primeiro.
+
+  Converte a liturgia INTEIRA -- os sete dias e a Avulsa. Converter em parte
+  criaria dois arquivos com metade da liturgia cada um.
+
+  QUEM CHAMA É O liturgiaAlterada, que é o funil de "o conteúdo da liturgia
+  mudou" -- ver o comentário lá para por que o gatilho é esse e por que
+  marcação não entra.
+
+  BACKUP ANTES DE CONVERTER, e é a ordem que importa:
+
+    1. COPIA o liturgia.ja para liturgia.ja.backup.<timestamp>;
+    2. confere que a cópia existe e tem o mesmo tamanho;
+    3. só então grava o JSON (.tmp + MoveFileEx);
+    4. renomeia o original.
+
+  Copiar, e não mover: renomear NÃO é backup. Se o passo seguinte falhasse, o
+  usuário ficaria sem arquivo nenhum no nome que o programa procura. Com a
+  cópia feita antes, existe rede desde o primeiro instante -- e se o backup
+  falhar, a conversão não acontece: converter sem rede é exatamente o que o
+  backup existe para evitar.
+
+  O nome do backup é inofensivo: o programa lê DOIS nomes fixos, liturgia.json
+  e liturgia.ja, e não varre dir_dados por curinga nenhum (conferido). Arquivo
+  com qualquer outro sufixo é ignorado.
+
+  FALHA NÃO DESFAZ NADA E NÃO BLOQUEIA NADA. A alteração que disparou a
+  conversão já está gravada, e o formato antigo continua sendo um que o
+  programa lê e grava: não há o que perder. A conversão é abortada, o .tmp é
+  apagado e o usuário é avisado UMA VEZ.
+
+  Uma vez, e não a cada alteração, por duas razões: avisar em laço seria pior
+  que o problema, e repetir a conversão da liturgia inteira a cada tecla num
+  estado que já falhou é trabalho jogado fora no pior momento possível. Depois
+  de uma falha o programa desiste pela sessão; reabrir tenta de novo.
+}
+procedure TfmIndex.garanteLiturgiaEmJson;
+var
+  doc: TMemIniFile;
+  saida: TLiturgiaArq;
+  caminho, temp, backup, origem: string;
+begin
+  //Falhou nesta sessão: não tenta mais e não avisa de novo.
+  if conversaoLiturgiaFalhou then
+    Exit;
+
+  //REENTRÂNCIA, duas: a conversão não pode se chamar no meio de si mesma, e
+  //não roda durante a sincronização do pacote -- aquela rotina grava na
+  //liturgia ao reapontar um item, e essa gravação volta a passar pelo funil.
+  //Hoje a conversão não grava por gravaParamLote (escreve o arquivo direto),
+  //mas depender disso seria depender de detalhe de implementação.
+  if convertendoLiturgia or sincronizandoAvulsa then
+    Exit;
+
+  //Já está em JSON, ou não há liturgia nenhuma para converter.
+  if FileExists(caminhoLiturgiaJson) then
+    Exit;
+
+  origem := caminhoLiturgia;
+  if not FileExists(origem) then
+    Exit;
+
+  caminho := caminhoLiturgiaJson;
+  temp := caminho + '.tmp';
+  backup := origem + '.backup.' + FormatDateTime('yyyymmddhhnnsszzz', Now);
+
+  convertendoLiturgia := True;
+  inicioOperacaoLiturgia;
+  try
+    try
+      //1. O backup, ANTES de qualquer coisa.
+      if not CopyFile(PChar(origem), PChar(backup), True) then
+        raise Exception.Create(
+          'Não foi possível criar a cópia de segurança da liturgia.');
+
+      //2. A cópia precisa existir e ter o mesmo tamanho. Sem esta conferência
+      //   o backup poderia ser um arquivo truncado, que é pior que nenhum --
+      //   dá a impressão de rede sem ser rede.
+      if not FileExists(backup) then
+        raise Exception.Create('A cópia de segurança da liturgia não foi criada.');
+
+      if (FileSize(backup) <> FileSize(origem)) or (FileSize(origem) < 0) then
+        raise Exception.Create(
+          'A cópia de segurança da liturgia saiu incompleta.');
+
+      //3. Agora sim o JSON, gravado no .tmp e trocado de uma vez: liturgia
+      //   pela metade é pior que não converter.
+      doc := abreIniLiturgia;
+      try
+        saida := TLiturgiaArq.criaPara(caminho);
+        try
+          saida.copiaDe(doc);
+          saida.gravaEm(temp);
+        finally
+          saida.Free;
+        end;
+      finally
+        doc.Free;
+      end;
+
+      if not MoveFileEx(PChar(temp), PChar(caminho),
+                        MOVEFILE_REPLACE_EXISTING) then
+        raise Exception.Create(
+          'Não foi possível gravar o arquivo ''liturgia.json''.');
+
+      {
+        4. O original sai do nome que o programa procura.
+
+        O JSON tem precedência na leitura, então deixar o .ja no lugar é
+        inofensivo ENQUANTO o JSON estiver legível; se um dia ele for
+        considerado corrupto, a leitura cairia no INI DEFASADO sem ninguém
+        perceber. Renomear fecha esse buraco -- e agora é seguro fazê-lo,
+        porque o backup do passo 1 é um arquivo separado.
+
+        Falha ao renomear não desfaz a conversão: o JSON já está no lugar e já
+        manda. Fica no log.
+      }
+      if not RenameFile(origem, origem + '.convertido.' +
+                        FormatDateTime('yyyymmddhhnnsszzz', Now)) then
+        try
+          gravaLog('garanteLiturgiaEmJson: nao foi possivel renomear ' + origem);
+        except
+        end;
+    except
+      on E: Exception do
+      begin
+        //Desiste pela sessão: nem tenta de novo, nem avisa de novo.
+        conversaoLiturgiaFalhou := True;
+
+        if FileExists(temp) then
+          DeleteFile(PChar(temp));
+
+        try
+          gravaLog('garanteLiturgiaEmJson: ' + E.ClassName + ' - ' + E.Message);
+        except
+        end;
+
+        Application.MessageBox(PChar(
+          'Não foi possível converter a liturgia para o formato novo.' +
+          #13#10#13#10 + E.Message + #13#10#13#10 +
+          'A sua alteração foi gravada e nada foi perdido: a liturgia ' +
+          'continua no formato antigo, que o programa lê normalmente. A ' +
+          'conversão será tentada de novo na próxima vez que o programa for ' +
+          'aberto.'),
+          TITULO, mb_ok + MB_ICONERROR);
+      end;
+    end;
+  finally
+    //SEMPRE em finally, os dois: exceção deixando o lote ligado significaria
+    //pacote nunca mais sincronizado e API recusando recarga pelo resto da
+    //sessão; e a trava de reentrância presa impediria qualquer conversão
+    //futura em silêncio.
+    //O ARQUIVO AUTORITATIVO pode ter trocado: o INI virou JSON, e o
+    //original saiu do nome que o programa procura. Sem isto o cache
+    //continuaria servindo o documento do arquivo renomeado.
+    invalidaCacheLiturgia;
+    convertendoLiturgia := False;
+    fimOperacaoLiturgia;
+  end;
+end;
+
+{
+  O FUNIL de "o conteúdo da liturgia mudou".
+
+  Os três pontos de escrita da liturgia chamam isto: os DOIS ramos do
+  gravaParamLote (o do JSON, que sai por Exit, e o do INI no fim da procedure)
+  e o apagaParam. Não existe ponto único acima deles -- o gravaParam é
+  envelope do gravaParamLote, e o abreIniLiturgia é compartilhado com os
+  leitores --, então o ponto único é este, chamado dos três.
+
+  Antes aqui havia só o pedeSincronizaAvulsa. A conversão entrou ao lado dele,
+  e não dentro dele, porque o pedeSincronizaAvulsa é do DIA 8: ele existe
+  porque a Avulsa mora num pacote. A conversão vale para qualquer dia.
+
+  MARCAÇÃO NÃO ENTRA, e isso é de propósito. Os chamadores já guardam com
+  `not soMarcacao(Itens)`, condição que existe porque marcar item como
+  concluído é a ação mais frequente DURANTE o culto e não muda o conteúdo.
+  Converter a liturgia inteira -- com backup, cópia de arquivo e tudo --
+  porque o operador marcou um item no meio do culto é surpresa, e é justamente
+  o momento em que ele menos quer uma operação de arquivo acontecendo. Não
+  escrever outra condição aqui: a exclusão vem de graça do soMarcacao.
+
+  A conversão vem PRIMEIRO: ela mexe no arquivo, e a sincronização do pacote
+  tem de ler o estado final.
+}
+procedure TfmIndex.liturgiaAlterada;
+begin
+  garanteLiturgiaEmJson;
+  pedeSincronizaAvulsa;
 end;
 
 procedure TfmIndex.garanteUtf8Liturgia;
@@ -7125,6 +7833,120 @@ begin
   end;
 end;
 
+{
+  O SELO do arquivo de liturgia: tamanho e data dos DOIS nomes possíveis.
+
+  Serve só para perceber mudança que o PROGRAMA NÃO FEZ -- alguém editando o
+  `liturgia.json` na mão, ou colando um recebido na pasta. Mudança nossa é
+  coberta pela invalidação explícita (ver invalidaCacheLiturgia), e tem de ser:
+  tamanho e data são fracos demais para o caso principal, porque duas
+  gravações seguidas podem sair do mesmo tamanho e dentro da granularidade da
+  data.
+
+  Uma chamada a GetFileAttributesEx por arquivo, que traz existência, tamanho
+  e data juntos -- mesmo molde do FileSize que já existia aqui.
+}
+function TfmIndex.seloLiturgia: string;
+
+  function selo(const caminho: string): string;
+  var
+    dados: TWin32FileAttributeData;
+  begin
+    if not GetFileAttributesEx(PChar(caminho), GetFileExInfoStandard,
+                               @dados) then
+      Exit('-');
+
+    Result := IntToStr(Int64(dados.nFileSizeLow) or
+                       (Int64(dados.nFileSizeHigh) shl 32)) + ':' +
+              IntToStr(Int64(dados.ftLastWriteTime.dwHighDateTime) shl 32 or
+                       Int64(dados.ftLastWriteTime.dwLowDateTime));
+  end;
+
+begin
+  //Os dois nomes, porque o JSON tem precedência sobre o INI: trocar de um
+  //para o outro muda qual arquivo manda, e o selo tem de notar isso.
+  Result := selo(caminhoLiturgiaJson) + '|' + selo(caminhoLiturgia);
+end;
+
+{
+  O documento da liturgia PARA LEITURA, reaproveitado entre chamadas.
+
+  QUEM CHAMA NÃO LIBERA. O objeto vive no form.
+
+  POR QUE EXISTE: cada lerParam da liturgia relia e reparseava o arquivo
+  INTEIRO -- ler do disco, parsear, remontar as seções de todos os dias, ler
+  UMA chave e jogar tudo fora. Medido: 5,66 ms por chave, dos quais o disco é
+  0,28 ms; o custo é remontar o documento, e era pago por chave. O
+  itemDaLiturgia lê de 4 a 8 chaves por item, então trocar de dia numa
+  liturgia de 15 itens custava perto de meio segundo só nisso. Com o documento
+  aberto uma vez, as mesmas leituras custam 112 vezes menos.
+
+  CACHE SÓ NA LEITURA, e é essa separação que o torna seguro: todo caminho de
+  ESCRITA continua chamando abreIniLiturgia e recebendo documento próprio,
+  recém-lido do disco. Nunca existe um escritor mexendo no mesmo objeto que os
+  leitores veem.
+
+  THREAD: isto é da thread da interface. Antes, cada lerParam criava e liberava
+  o próprio documento, então ler a liturgia de outra thread era inofensivo --
+  agora os leitores compartilham o objeto. Toda leitura de liturgia da API roda
+  dentro de executaNaInterface (conferido), e o comentário do fmTransmitir que
+  afirmava a inocuidade foi qualificado: vale para o config, não para a
+  liturgia.
+}
+function TfmIndex.liturgiaParaLeitura: TCustomIniFile;
+var
+  selo: string;
+begin
+  selo := seloLiturgia;
+
+  if (FLitCache <> nil) and (FLitSelo = selo) then
+    Exit(FLitCache);
+
+  FreeAndNil(FLitCache);
+  //A atribuição é DEPOIS da chamada de propósito: o abreIniLiturgia invalida
+  //o cache no topo dele, e aqui ele já está nil.
+  FLitCache := abreIniLiturgia;
+  FLitSelo := selo;
+  Result := FLitCache;
+end;
+
+{
+  Joga fora o documento em cache.
+
+  A INVALIDAÇÃO EXPLÍCITA É O QUE GARANTE QUE O USUÁRIO VÊ A PRÓPRIA
+  ALTERAÇÃO -- não o selo. Os pontos, auditados um a um pelo nome da rotina e
+  não por suposição:
+
+    gravaParamLote          no topo do ramo da liturgia, porque ele cobre os
+                            DOIS ramos de gravação e NENHUM dos dois passa
+                            pelo abreIniLiturgia -- o do JSON chama
+                            leLiturgiaJson direto e o do INI cria TMemIniFile
+                            em cima do caminho. É o caminho de escrita MAIS
+                            USADO (adicionar, renomear, trocar cor,
+                            reordenar), e é exatamente o que uma versão
+                            anterior deste cache deixou de fora por afirmar
+                            que "todo escritor passa pelo abreIniLiturgia".
+    gravaLiturgiaJson       funil de toda gravação em JSON, inclusive a
+                            sincronização da Avulsa.
+    abreIniLiturgia         no topo: cobre o apagaParam e a aplicação do
+                            pacote da Avulsa, que pedem documento próprio.
+    importaArquivoLiturgia  troca o arquivo por fora, com CopyFile, e o rename
+                            do JSON sobreposto muda a precedência.
+    garanteLiturgiaEmJson   troca QUAL ARQUIVO É O AUTORITATIVO no meio da
+                            sessão -- o INI vira JSON. Sem isto o cache
+                            continuaria servindo o documento do arquivo que
+                            acabou de ser renomeado.
+    recarregaLiturgia       o reload da API existe para refletir alteração
+                            feita por fora; servir cache ali seria negar o
+                            propósito da rota.
+    FormDestroy             libera o objeto.
+}
+procedure TfmIndex.invalidaCacheLiturgia;
+begin
+  FreeAndNil(FLitCache);
+  FLitSelo := '';
+end;
+
 function TfmIndex.abreIniLiturgia: TMemIniFile;
 var
   path: string;
@@ -7133,6 +7955,10 @@ var
   backupPath: string;
   docJson: TLiturgiaArq;
 begin
+  //Documento próprio para quem pede: este é o caminho da ESCRITA. Invalidar
+  //aqui cobre o apagaParam e a aplicação do pacote da Avulsa.
+  invalidaCacheLiturgia;
+
   //Liturgia em JSON tem precedencia sobre o INI. TLiturgiaArq descende de
   //TMemIniFile, entao quem chama esta funcao nao percebe a diferenca --
   //inclusive o apagaParam, que termina chamando UpdateFile.
@@ -7338,6 +8164,12 @@ begin
   try
     if arq = arq_liturgia then
     begin
+      //O cache de LEITURA vai mudar debaixo dos leitores. Invalidar aqui, no
+      //topo do ramo, cobre os DOIS caminhos de gravacao -- e nenhum deles passa
+      //pelo abreIniLiturgia, que e onde uma versao anterior deste cache
+      //achou que estaria coberto. E o caminho de escrita mais usado.
+      invalidaCacheLiturgia;
+
       //Liturgia em JSON: le, aplica e regrava no mesmo formato. Sem isto um
       //liturgia.json existente seria lido mas nunca atualizado. JSON ilegivel
       //devolve nil e a gravacao segue pelo INI.
@@ -7360,7 +8192,7 @@ begin
         //sumir ao reiniciar: apagar passa pelo apagaParam, que tem o
         //gancho dele e sincronizava, e adicionar passa só por aqui.
         if (arq = arq_liturgia) and not soMarcacao(Itens) then
-          pedeSincronizaAvulsa;
+          liturgiaAlterada;
 
         Exit;
       end;
@@ -7463,7 +8295,7 @@ begin
   //do try acima de propósito: falha ao regravar o pacote nao pode desfazer a
   //gravacao da liturgia, que ja aconteceu.
   if (arq = arq_liturgia) and not soMarcacao(Itens) then
-    pedeSincronizaAvulsa;
+    liturgiaAlterada;
 end;
 
 procedure TfmIndex.gravaParam(Grupo, Param, Valor, Arquivo: string);
@@ -7658,16 +8490,19 @@ begin
 end;
 
 procedure TfmIndex.apagaItemLiturgia(item: string);
-var
-  Panel: TPanel;
 begin
-  Panel := TPanel(FindComponent(item));
-  Panel.Visible := false;
-  apagaParam(item,'',arq_liturgia);
+  apagaParam(item, '', arq_liturgia);
   lbLiturgia.Items.Delete(lbLiturgia.Items.IndexOf(item));
 
   salvaItensLiturgia;
+  //Antes era Panel.Visible := false, e o painel ficava ali, invisivel,
+  //ate a proxima carga da tela.
+  //
+  //ESTRUTURAL: a lista encurtou, e a ancora da rolagem pode ter sido
+  //justamente o item removido -- o defineItens trata isso.
+  desenhaLiturgia(True);
 end;
+
 
 procedure TfmIndex.apagaParam(Grupo, Param, Arquivo: string);
 var
@@ -7696,7 +8531,7 @@ begin
   end;
 
   if (Arquivo = arq_liturgia) then
-    pedeSincronizaAvulsa;
+    liturgiaAlterada;
 end;
 
 procedure TfmIndex.cbAlinhamentoCapaProgramaChange(Sender: TObject);
@@ -8251,57 +9086,35 @@ begin
     abreLetraMusica('BD',txt,DM.qrBUSCA.FieldByName('ID').AsInteger,(TComponent(Sender).Tag) < 3);
 end;
 
-procedure TfmIndex.lit_modItem_bteditClick(Sender: TObject);
-begin
-  fIniciando.AppCreateForm(TfLiturgia, fLiturgia);
-  fLiturgia.Caption := 'Alterar Item';
-  fLiturgia.id := TPanel(Sender).Parent.Name;
-  fLiturgia.ShowModal;
-end;
-
-procedure TfmIndex.lit_modItem_checkbClick(Sender: TObject);
+//O corpo do antigo lit_modItem_textoClick, que era o despachante de tudo:
+//o Sender dizia QUAL item (pelo nome do painel) e o Tag dele dizia QUAL
+//acao. Agora os dois vem por parametro, e o corpo nao conhece controle --
+//mesma receita do expandirArea (secao 4k do CLAUDE.md).
+//
+//O tag e o mesmo de antes: 0 para o corpo do item, 1..6 para as seis
+//acoes de musica, na ordem dos lit_modItem_icomus1..6.
+procedure TfmIndex.executaItemLiturgia(const item: string; tag: Integer);
 var
-  Panel: TPanel;
-begin
-  Panel := TPanel(TPanel(Sender).Parent);
-
-  if TbsSkinCheckBox(Sender).Checked then
-  begin
-    gravaParam(Panel.Name, 'checked', FormatDateTime('dd/mm/yyyy',Now()), arq_liturgia);
-    TbsSkinStdLabel(FindComponent(Panel.Name+'_titulo')).Font.Style := [fsBold,fsStrikeOut];
-    TbsSkinStdLabel(FindComponent(Panel.Name+'_subtitulo')).Font.Style := [fsStrikeOut];
-    Panel.Color := $00CED5FF;
-  end
-  else
-  begin
-    gravaParam(Panel.Name, 'checked', '', arq_liturgia);
-    TbsSkinStdLabel(FindComponent(Panel.Name+'_titulo')).Font.Style := [fsBold];
-    TbsSkinStdLabel(FindComponent(Panel.Name+'_subtitulo')).Font.Style := [];
-    Panel.Color := clWhite;
-  end;
-end;
-
-procedure TfmIndex.lit_modItem_textoClick(Sender: TObject);
-var
-  Panel: TPanel;
-  item,subitem: string;
-  id,tag: Integer;
+  subitem: string;
+  id: Integer;
   txt:string;
 begin
-  if Sender is TbsSkinStdLabel
-    then Panel := TPanel(TPanel(Sender).Parent.Parent)
-    else Panel := TPanel(TPanel(Sender).Parent);
-  item := Panel.Name;
-  if (lerParam(item, 'tipo', '', arq_liturgia) = 'categoria') then
-  begin
-    DM.ColorDialog.Color := Panel.Color;
-    DM.ColorDialog.Execute;
-    Panel.Color := DM.ColorDialog.Color;
+  if (item = '') then
+    Exit;
 
-    gravaParam(item, 'cor', ColorToString(DM.ColorDialog.Color), arq_liturgia);
+  if EhDivisoria(lerParam(item, 'tipo', '', arq_liturgia)) then
+  begin
+    escolheCorDoItemLiturgia(item);
   end
   else if (lerParam(item, 'tipo', '', arq_liturgia) = 'musica') then
   begin
+    //Tag 0 e o clique no CORPO do item -- os seis icones mandam o tag deles.
+    //E o corpo e quem respeita o modo escolhido na edicao. Um ponto so: o
+    //clique da tela e a API passam os dois por aqui.
+    if (tag = 0) then
+      tag := TagDaAcao(ModoDoParam(lerParam(item, CHAVE_MODO, '',
+        arq_liturgia)));
+
     if (lerParam(item, 'escolha', '0', arq_liturgia) = '1') then
     begin
       fIniciando.AppCreateForm(TfBuscaMusica, fBuscaMusica);
@@ -8312,8 +9125,6 @@ begin
     end
     else
       id := StrToInt('0'+lerParam(item, 'musica', '0', arq_liturgia));
-
-    tag := TComponent(Sender).Tag;
 
     if (tag = 4) then
       abreArquivoMusica(id)
@@ -8431,10 +9242,13 @@ begin
     DM.cdsItensAgendados.Filtered := true;
   end;
 
-  if (lerParam(item, 'tipo', '', arq_liturgia) <> 'categoria')
+  if not EhDivisoria(lerParam(item, 'tipo', '', arq_liturgia))
     and (cbMarcarConc.Checked) then
   begin
-    TbsSkinCheckBox(FindComponent(item+'_checkb')).Checked := True;
+    gravaParam(item, 'checked', FormatDateTime('dd/mm/yyyy', Now()),
+      arq_liturgia);
+    if (listaLiturgia <> nil) then
+      listaLiturgia.marcaItem(listaLiturgia.indiceDoIdent(item), True);
   end;
 end;
 
@@ -11119,7 +11933,26 @@ begin
     Exit;
   end;
 
-  txtCategoria.Text := DM.cdsCategoriasItensAgendados.FieldByName('ID').AsString;
+  selecionaCategoriaAgendados(
+    DM.cdsCategoriasItensAgendados.FieldByName('ID').AsString);
+end;
+
+{
+  Mostra a lista de itens agendados de uma categoria.
+
+  É o corpo do categoriasItensAgendadosClick, extraído para poder ser chamado
+  POR NOME e não só pelo clique -- o menu de contexto da liturgia chama daqui.
+  Receita do expandirAreaPorNome e do executaItemLiturgia: envelope + corpo,
+  sem reindentar o corpo. A alternativa seria o menu posicionar o dataset e
+  fabricar um Sender para o handler ler, que é exatamente o que o v2LiturgyAbre
+  fazia e que este trabalho desfez.
+
+  Recebe o ID da categoria, e não o nome: é o ID que o txtCategoria guarda e
+  por onde o cdsItensAgendados é filtrado.
+}
+procedure TfmIndex.selecionaCategoriaAgendados(const idCategoria: string);
+begin
+  txtCategoria.Text := idCategoria;
   DM.cdsItensAgendados.Filtered := true;
   DM.cdsItensAgendados.Filter := 'CATEGORIA = '''+txtCategoria.Text+'''';
   pnlItensAgendados.Visible := True;
@@ -11127,83 +11960,6 @@ begin
   dbctrlItensAgendados.ColCount := 1;
 
   refreshCalendar();
-end;
-
-procedure TfmIndex.move_MouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-var
-  Panel: TPanel;
-  w: integer;
-begin
-  if Sender is TbsPngImageView
-    then Panel := TPanel(TPanel(Sender).Parent.Parent)
-    else Panel := TPanel(TPanel(Sender).Parent);
-
-  move_panel := TPanel.Create(Self);
-//  move_panel.Color := Panel.Color;
-
-  move_x := x;
-  move_y := y;
-  move := True;
-
-  Panel.BringToFront;
-  w := Panel.Width;
-  Panel.Align := alNone;
-  Panel.Width := w;
-  Panel.Color := $0085F8FE;
-  panel.DoubleBuffered := True;
-  sbLiturgia.DoubleBuffered := True;
-end;
-
-procedure TfmIndex.move_MouseMove(Sender: TObject; Shift: TShiftState;
-  X, Y: Integer);
-var
-  Panel: TPanel;
-begin
-  if Sender is TbsPngImageView
-    then Panel := TPanel(TPanel(Sender).Parent.Parent)
-    else Panel := TPanel(TPanel(Sender).Parent);
-
-  if move then
-  begin
-    Panel.Left := Panel.Left + (x - move_x);
-    Panel.Top := Panel.Top + (y - move_y);
-  end;
-end;
-
-procedure TfmIndex.move_MouseUp(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-var
-  Panel: TPanel;
-  i: integer;
-  itens: TStringList;
-begin
-  if Sender is TbsPngImageView
-    then Panel := TPanel(TPanel(Sender).Parent.Parent)
-    else Panel := TPanel(TPanel(Sender).Parent);
-
-  move := False;
-  Panel.Align := alTop;
-  Panel.Color := move_panel.Color;
-
-  move_panel.Free;
-  panel.DoubleBuffered := False;
-  sbLiturgia.DoubleBuffered := False;
-
-  itens := TStringList.Create;
-  for i := 0 to pred(sbLiturgia.ControlCount) do
-  begin
-    if sbLiturgia.Controls[i].Visible
-      then itens.Add(FormatFloat('000000000',(sbLiturgia.VScrollBar.RealClientHeight*100)+sbLiturgia.Controls[i].Top)+'|'+sbLiturgia.Controls[i].Name);
-  end;
-  itens.Sort;
-  lbLiturgiaPos.Items.Clear;
-  lbLiturgiaPos.Items := itens;
-  lbLiturgia.Items.Clear;
-  for i := 0 to itens.Count-1 do
-    lbLiturgia.Items.Add(Copy(itens[i], Pos('|',itens[i])+1, Length(itens[i])));
-
-  salvaItensLiturgia;
 end;
 
 procedure TfmIndex.ckVideoOnJanelaClick(Sender: TObject);
@@ -11353,6 +12109,8 @@ begin
     else btwsMaximized.ImageIndex := StrToInt('0'+layoutValue.Strings.Values['btMaximized']);
   btwsClose.ImageIndex := StrToInt('0'+layoutValue.Strings.Values['btClose']);
   btwsDownload.ImageIndex := StrToInt('0'+layoutValue.Strings.Values['btDownload']);
+
+  aplicaTemaDaInterface;
 end;
 
 procedure TfmIndex.rbDirecaoClick(Sender: TObject);
@@ -12550,69 +13308,84 @@ begin
   abrePagina(tsRelogio);
 end;
 
+//Marca ou desmarca um item: grava o parametro e redesenha. Ponto unico,
+//porque a selecao multipla tambem passa por aqui -- antes cada um desses
+//caminhos atribuia Checked no TbsSkinCheckBox do painel, e era o OnClick
+//disparado pela atribuicao (armadilha do BusinessSkinForm, secao 3 do
+//CLAUDE.md) que gravava o parametro de tabela.
+//RECEBE A LISTA, porque agora ha duas: a da aba e a do widget flutuante.
+//Antes isto lia a global, e era o unico ponto que gravava a marca -- o
+//litMarcar tinha uma copia do mesmo corpo, que saiu.
+procedure TfmIndex.marcaItemLiturgia(lista: TListaLiturgia;
+  indice: Integer; marcado: Boolean);
+var
+  item: string;
+begin
+  if (lista = nil) then
+    Exit;
+
+  item := lista.identDoItem(indice);
+  if (item = '') then
+    Exit;
+
+  if marcado then
+    gravaParam(item, 'checked', FormatDateTime('dd/mm/yyyy', Now()),
+      arq_liturgia)
+  else
+    gravaParam(item, 'checked', '', arq_liturgia);
+
+  lista.marcaItem(indice, marcado);
+end;
+
+//Marcar todos.
 procedure TfmIndex.bsSkinSpeedButton53Click(Sender: TObject);
 var
   i: integer;
-  item: string;
-  checkbox: TbsSkinCheckBox;
 begin
-  for i := lbLiturgia.Items.Count-1 downto 0 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item+'_checkb'));
-    if Assigned(checkbox)
-      then checkbox.Checked := True;
-  end;
+  for i := 0 to listaLiturgia.quantidade - 1 do
+    marcaItemLiturgia(listaLiturgia, i, True);
 end;
 
+//Desmarcar todos.
 procedure TfmIndex.bsSkinSpeedButton54Click(Sender: TObject);
 var
   i: integer;
-  item: string;
-  checkbox: TbsSkinCheckBox;
 begin
-  for i := lbLiturgia.Items.Count-1 downto 0 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item+'_checkb'));
-    if Assigned(checkbox)
-      then checkbox.Checked := False;
-  end;
+  for i := 0 to listaLiturgia.quantidade - 1 do
+    marcaItemLiturgia(listaLiturgia, i, False);
 end;
 
+//Inverter a marcacao.
 procedure TfmIndex.bsSkinSpeedButton55Click(Sender: TObject);
 var
   i: integer;
-  item: string;
-  checkbox: TbsSkinCheckBox;
 begin
-  for i := lbLiturgia.Items.Count-1 downto 0 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item+'_checkb'));
-    if Assigned(checkbox)
-      then checkbox.Checked := not checkbox.Checked;
-  end;
+  for i := 0 to listaLiturgia.quantidade - 1 do
+    marcaItemLiturgia(listaLiturgia, i,
+      not listaLiturgia.itemMarcado(i));
 end;
 
 procedure TfmIndex.btApagaLitSelClick(Sender: TObject);
 var
   i: integer;
-  item: string;
-  checkbox: TbsSkinCheckBox;
+  marcados: TStringList;
 begin
   if application.messagebox(PChar('Deseja realmente apagar todos os itens marcados?'), TITULO, mb_yesno + mb_iconquestion) <> 6 then
     Exit;
 
-  for i := lbLiturgia.Items.Count-1 downto 0 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item+'_checkb'));
-    if Assigned(checkbox) then
-    begin
-      if checkbox.Checked
-        then apagaItemLiturgia(item);
-    end;
+  //Os identificadores sao recolhidos ANTES de apagar: o apagaItemLiturgia
+  //remonta a lista, e um laco por indice andaria sobre uma lista que muda
+  //debaixo dele.
+  marcados := TStringList.Create;
+  try
+    for i := 0 to listaLiturgia.quantidade - 1 do
+      if listaLiturgia.itemMarcado(i) then
+        marcados.Add(listaLiturgia.identDoItem(i));
+
+    for i := 0 to marcados.Count - 1 do
+      apagaItemLiturgia(marcados[i]);
+  finally
+    marcados.Free;
   end;
 end;
 
@@ -12620,7 +13393,6 @@ procedure TfmIndex.btCopiaLitSelClick(Sender: TObject);
 var
   i, k, dia: Integer;
   item, novoId, semanaStr: string;
-  checkbox: TbsSkinCheckBox;
   dlg: TfCopiaLiturgiaDia;
   diaOrigem: Integer;
   diasDestino: TArray<Integer>;
@@ -12637,13 +13409,9 @@ var
   end;
 begin
   FLitClipboard.Clear;
-  for i := 0 to lbLiturgia.Items.Count - 1 do
-  begin
-    item := lbLiturgia.Items[i];
-    checkbox := TbsSkinCheckBox(FindComponent(item + '_checkb'));
-    if Assigned(checkbox) and checkbox.Checked then
-      FLitClipboard.Add(item);
-  end;
+  for i := 0 to listaLiturgia.quantidade - 1 do
+    if listaLiturgia.itemMarcado(i) then
+      FLitClipboard.Add(listaLiturgia.identDoItem(i));
 
   if FLitClipboard.Count = 0 then
   begin
@@ -17568,6 +18336,9 @@ begin
   else
     destino := caminhoLiturgia;
 
+  //Troca o arquivo POR FORA, com CopyFile: o cache de leitura tem de cair.
+  invalidaCacheLiturgia;
+
   if not CopyFile(PChar(arq), PChar(destino), False) then
   begin
     Application.MessageBox('Não foi possível gravar a liturgia importada!',
@@ -17581,6 +18352,10 @@ begin
   begin
     guardado := caminhoLiturgiaJson + '.sobreposto.' +
                 FormatDateTime('yyyymmddhhnnss', Now);
+
+    //O rename muda a PRECEDENCIA (o JSON sai de cena e o INI passa a
+    //mandar), entao o cache cai de novo.
+    invalidaCacheLiturgia;
 
     if not RenameFile(caminhoLiturgiaJson, guardado) then
     begin
@@ -17721,17 +18496,20 @@ function TfmIndex.pastaInicialSeletorLiturgia: string;
 begin
   Result := '';
 
-  if (diaLiturgiaAberto = DIA_AVULSA) and
+  if regrasDoDiaAberto.seletorNaPastaDoPacote and
      DirectoryExists(pastaArquivosAvulsa) then
     Result := pastaArquivosAvulsa;
 end;
 
-//A guia Avulsa mora dentro do .llja. Serve ao fmLiturgia, que precisa saber
-//disso para não oferecer o que não cabe num pacote de arquivos -- o
-//diaLiturgiaAberto é private.
-function TfmIndex.liturgiaAvulsaAberta: Boolean;
+//As propriedades do dia que está aberto na tela.
+//
+//Existe porque o diaLiturgiaAberto é private, e private no Delphi só alcança a
+//mesma unit -- o fmLiturgia não chega nele. Devolve o REGISTRO e não um
+//"éAvulsa": quem pergunta quer saber se aceita diretório ou onde o seletor
+//abre, não qual é o número do dia. Ver TRegrasDoDia.
+function TfmIndex.regrasDoDiaAberto: TRegrasDoDia;
 begin
-  Result := (diaLiturgiaAberto = DIA_AVULSA);
+  Result := RegrasDoDia(diaLiturgiaAberto);
 end;
 
 //Pasta onde os arquivos do pacote ficam depois de extraidos.
@@ -17898,7 +18676,7 @@ begin
   if avulsaPendente or sincronizandoAvulsa then
     Exit;
 
-  avulsaPendente := True;
+    avulsaPendente := True;
 
   //Sem janela ainda (gravação durante a criação do form) não há para onde
   //postar: sincroniza na hora, que nesse momento não tem ação pela metade.
@@ -17918,8 +18696,65 @@ end;
 
 procedure TfmIndex.WMSincronizaAvulsa(var Msg: TMessage);
 begin
+  //No meio de uma operação de liturgia o pedido FICA PENDENTE em vez de ser
+  //atendido: ver inicioOperacaoLiturgia. O fim repõe o pedido.
+  if (litOperacaoEmLote > 0) then
+    Exit;
+
   avulsaPendente := False;
   sincronizaAvulsaNoPacote;
+end;
+
+{
+  Uma OPERAÇÃO de liturgia -- início e fim.
+
+  Serve ao caso de uma ação ser DUAS gravações. Acrescentar um item "acima" ou
+  "abaixo" é o exemplo: o btAddClick do fmLiturgia grava o item no FIM da
+  ordem, e só depois a posição pedida é aplicada movendo-o. Entre as duas, a
+  liturgia no disco está com o item no lugar errado.
+
+  POR QUE ESTE PAR EXISTE, mesmo o trecho já sendo atômico hoje: entre as duas
+  gravações não há bombeamento de mensagens, então hoje ninguém observa o meio.
+  Isso é uma propriedade FRÁGIL -- um Application.ProcessMessages acrescentado
+  ali no futuro abriria a janela de novo, sem erro de compilação e sem teste
+  que pegasse. O par documenta a invariante onde ela mora e protege contra
+  isso. Não remover por parecer redundante: a redundância é o ponto.
+
+  O QUE ELE NÃO É: trava contra estado transitório. Estado intermediário
+  VÁLIDO e autocorretivo não é estado corrupto -- aqui o pior caso é uma ordem
+  obsoleta em milissegundos, que o passo seguinte corrige. Isso é diferente do
+  item fantasma, onde o observador FABRICAVA um item vazio que virava
+  permanente no liturgia.json. Trava serve para impedir corrupção, não para
+  esconder transitoriedade; por isso ela NÃO é esticada por cima do ShowModal
+  do diálogo de item, que fica aberto enquanto o operador preenche -- isso
+  deixaria a API recusando por tempo indeterminado, que é o defeito que o
+  fAtualiza já cobrou do projeto.
+
+  O fim roda SEMPRE em finally: exceção no meio deixando o lote ligado
+  significa pacote nunca mais sincronizado e API recusando recarga pelo resto
+  da sessão, com todo o resto do programa parecendo normal.
+}
+procedure TfmIndex.inicioOperacaoLiturgia;
+begin
+  Inc(litOperacaoEmLote);
+end;
+
+procedure TfmIndex.fimOperacaoLiturgia;
+begin
+  if (litOperacaoEmLote > 0) then
+    Dec(litOperacaoEmLote);
+
+  //Pedido que chegou durante a operação é atendido agora, uma vez só.
+  if (litOperacaoEmLote = 0) and avulsaPendente and HandleAllocated then
+    PostMessage(Handle, WM_SINCRONIZA_AVULSA, 0, 0);
+end;
+
+//Há uma operação de liturgia em curso? A API pergunta isto para recusar a
+//recarga em vez de recompor a tela a partir de um estado pela metade.
+function TfmIndex.liturgiaEmOperacao: Boolean;
+begin
+  Result := (litOperacaoEmLote > 0) or
+            ((fLiturgia <> nil) and fLiturgia.Visible);
 end;
 
 //Atende um pedido pendente antes de o programa fechar e levar o dir_temp
@@ -18062,10 +18897,19 @@ begin
       //pedido. Sem repintar, o nome curto só apareceria na próxima abertura.
       //Só repinta o que existe na tela: se outro dia estiver aberto, os
       //painéis da Avulsa não estão montados.
+      //ATENÇÃO: isto era um laço repintando item por item, guardado por
+      //`if Assigned(FindComponent(redesenha[i]))` -- "repinta só o item cujo
+      //painel existe na tela". Com a lista desenhada NÃO HÁ painel por item, e
+      //aquele FindComponent devolveria nil sempre: a repintura nunca
+      //aconteceria, e o nome curto do arquivo só apareceria na abertura
+      //seguinte. Um defeito que não dá erro de compilação nem conflito de
+      //merge -- só deixa de funcionar.
+      //
+      //O desenhaLiturgia remonta a lista inteira e não precisa saber quais
+      //itens mudaram, então é mais simples que o laço era. A lista `redesenha`
+      //continua servindo ao resto da rotina.
       if atualizaTela then
-        for i := 0 to redesenha.Count - 1 do
-          if Assigned(FindComponent(redesenha[i])) then
-            carregaItemLiturgia(redesenha[i]);
+        desenhaLiturgia;
     finally
       redesenha.Free;
       jaUsados.Free;

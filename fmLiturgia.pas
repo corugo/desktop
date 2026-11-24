@@ -136,7 +136,7 @@ procedure TfLiturgia.ajustaOpcoesArquivo;
 var
   avulsa: Boolean;
 begin
-  avulsa := fmIndex.liturgiaAvulsaAberta;
+  avulsa := not fmIndex.regrasDoDiaAberto.aceitaDiretorio;
 
   bsSkinSpeedButton3.Visible := not avulsa;
 
@@ -151,7 +151,7 @@ var
 begin
   //O botão fica oculto na Avulsa; a guarda é barata e cobre o clique que
   //venha de outro caminho.
-  if fmIndex.liturgiaAvulsaAberta then
+  if not fmIndex.regrasDoDiaAberto.aceitaDiretorio then
   begin
     Application.MessageBox(AVISO_SEM_PASTA, fmIndex.titulo,
                            mb_ok + MB_ICONEXCLAMATION);
@@ -268,7 +268,7 @@ begin
 
     //O botão de diretório não aparece na Avulsa, mas o caminho pode ter
     //sido digitado ou vir de um arrastar-e-soltar. Ver ajustaOpcoesArquivo.
-    if fmIndex.liturgiaAvulsaAberta and
+    if not fmIndex.regrasDoDiaAberto.aceitaDiretorio and
        ((Copy(param, Length(param), 1) = PathDelim) or
         DirectoryExists(param)) then
     begin

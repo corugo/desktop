@@ -1661,8 +1661,17 @@ end;
   O cabeçalho é a forma preferida: na URL o token vai parar no histórico do
   navegador, em log de servidor e no cabeçalho Referer enviado a terceiros.
 
-  lerParam pode ser chamado desta thread: ele cria um TIniFile local e lê pela
-  API do Windows, que é segura entre threads.
+  lerParam DO CONFIG pode ser chamado desta thread: ele cria um TIniFile local
+  e lê pela API do Windows, que é segura entre threads.
+
+  ATENÇÃO: isso vale para o config, NÃO para a liturgia. O lerParam da liturgia
+  (`Arquivo = arq_liturgia`) passa a usar o documento em CACHE do fmIndex, que
+  é da thread da interface e compartilhado entre os leitores -- antes cada
+  chamada criava e liberava o próprio documento, e por isso era inofensiva de
+  qualquer thread. Toda leitura de liturgia da API roda dentro de
+  executaNaInterface (conferido: a do action=list, a do v2LiturgyAbre e a do
+  v2LiturgyDiaDoItem, que é chamado de dentro de uma), e qualquer leitura nova
+  tem de fazer o mesmo.
 }
 function TfTransmitir.v2TokenValido(ARequestInfo: TIdHTTPRequestInfo): Boolean;
 var
@@ -3244,11 +3253,11 @@ end;
 {
   Abre um item da liturgia.
 
-  Reaproveita lit_modItem_textoClick, o mesmo handler do clique do operador,
-  para que a API não tenha uma segunda versão da lógica que possa divergir.
-  Esse handler descobre o item pelo nome do painel e escolhe a variante pelo
-  Tag do componente clicado, então aqui o Tag é ajustado e devolvido ao valor
-  original em seguida.
+  Reaproveita o executaItemLiturgia, o mesmo despachante do clique do
+  operador, para que a API não tenha uma segunda versão da lógica que
+  possa divergir. Ele recebe a chave do item e o tag da variante -- antes
+  era um handler de clique, e a API precisava achar o painel do item na
+  tela e trocar o Tag dele para escolher a variante.
 }
 procedure TfTransmitir.v2LiturgyAbre(ARequestInfo: TIdHTTPRequestInfo;
   AResponseInfo: TIdHTTPResponseInfo; const acao: string);
@@ -3290,8 +3299,7 @@ begin
   if not executaNaInterface(
     procedure
     var
-      alvo: TComponent;
-      tagOriginal, diaItem: Integer;
+      diaItem: Integer;
     begin
       tipo := fmIndex.lerParam(chave, 'tipo', '', fmIndex.arq_liturgia);
       ehCategoria := (tipo = 'categoria');
@@ -3299,37 +3307,32 @@ begin
         Exit;
 
       {
-        Os painéis só existem depois que a liturgia daquele dia é montada, e
-        comandar pela API não pode depender de o operador ter aberto a aba.
+        Comandar pela API não pode depender de o operador ter aberto a aba.
 
         Monta-se o dia a que o item pertence, não o de hoje: a liturgia
         costuma estar preenchida no sábado, e montar hoje deixaria o item de
-        outro dia sem painel. O dia é descoberto procurando a chave nas listas
+        outro dia de fora. O dia é descoberto procurando a chave nas listas
         de 1 a 7 do próprio arquivo.
-      }
-      if (fmIndex.FindComponent(chave + '_texto') = nil) then
-      begin
-        diaItem := v2LiturgyDiaDoItem(chave);
-        if (diaItem > 0) then
-        begin
-          fmIndex.loadCol.Strings.Values['LITURGIA:SEMANA'] := IntToStr(diaItem);
-          fmIndex.carregaLiturgia(diaItem);
-        end;
-      end;
 
-      alvo := fmIndex.FindComponent(chave + '_texto');
-      if (alvo = nil) then
+        Antes isto era condicionado a EXISTIR o painel do item na tela, e o
+        item era executado passando esse painel como Sender, com o Tag dele
+        trocado e reposto. Não há mais painel: o executaItemLiturgia recebe a
+        chave e o tag. O que ainda importa é a semana corrente, porque o item
+        do tipo itens-agendados resolve a data por ela.
+      }
+      diaItem := v2LiturgyDiaDoItem(chave);
+      if (diaItem <= 0) then
         Exit;
 
-      achou := True;
-
-      tagOriginal := TComponent(alvo).Tag;
-      try
-        TComponent(alvo).Tag := marca;
-        fmIndex.lit_modItem_textoClick(alvo);
-      finally
-        TComponent(alvo).Tag := tagOriginal;
+      if (StrToIntDef(
+        fmIndex.loadCol.Strings.Values['LITURGIA:SEMANA'], 0) <> diaItem) then
+      begin
+        fmIndex.loadCol.Strings.Values['LITURGIA:SEMANA'] := IntToStr(diaItem);
+        fmIndex.carregaLiturgia(diaItem);
       end;
+
+      achou := True;
+      fmIndex.executaItemLiturgia(chave, marca);
     end, TIMEOUT_COMANDO) then
   begin
     respondeV2Ocupado(AResponseInfo, acao);
