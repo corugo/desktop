@@ -185,6 +185,8 @@ type
       AResponseInfo: TIdHTTPResponseInfo; const acao: string);
     procedure v2LiturgyAbre(ARequestInfo: TIdHTTPRequestInfo;
       AResponseInfo: TIdHTTPResponseInfo; const acao: string);
+    procedure v2LiturgyRecarrega(AResponseInfo: TIdHTTPResponseInfo;
+      const acao: string);
     function v2LiturgyDiaDoItem(const chave: string): Integer;
 
     // Rotas de comando
@@ -214,7 +216,11 @@ implementation
 uses
   fmMusica, fmMenu, fmQRCode, dmComponentes, fmMonitorSorteio, fmVideoOn, Vcl.MPlayer,
   System.SyncObjs, System.StrUtils, System.IOUtils, System.Hash, IdURI, IdGlobal,
-  IdStack, Winapi.WinInet;
+  IdStack, Winapi.WinInet,
+  //Pelo modo de abertura do item de liturgia: ModoDoParam, CHAVE_MODO,
+  //TagDaAcao e NomeDaAcao. E o MESMO vocabulario que a tela usa, entao a API
+  //nao tem uma segunda versao da leitura nem dos nomes.
+  uItensLiturgia, uMenuMusicas;
 
 // ── Enumeração de interfaces de rede (iphlpapi) ─────────────────────────────
 
@@ -1401,6 +1407,14 @@ end;
 //            maiúsculas e com Trim. Ausente -> 400 MISSING_*; inválido ->
 //            400 INVALID_*. Parâmetro desconhecido é ignorado. Os valores
 //            são lidos por v2Param, que decodifica em UTF-8.
+//
+// LÍNGUA     Contrato em INGLÊS, texto para humano em PORTUGUÊS. Ou seja:
+//            rota, parâmetro, valor de "action", nome de campo de dados e
+//            "code" em inglês; "message" em português.
+//
+//            A v1 difere - lá as mensagens são em inglês - e NÃO se mexe
+//            nela: mudar o texto de uma resposta que já está no ar quebraria
+//            quem lê o texto em vez do code.
 //
 // RESPOSTA   Sempre JSON em UTF-8, inclusive nos erros.
 //
@@ -3065,24 +3079,31 @@ begin
 end;
 
 {
-  Liturgia: lista os itens do dia e abre um deles.
+  Liturgia: lista os itens do dia, abre um deles e recompõe a tela.
 
-  A lista é lida direto do liturgia.ja, e não dos painéis da tela. Isso é
-  proposital: os painéis só passam a existir quando o operador abre a aba
-  Liturgia pela primeira vez - tsLiturgiaShow atribui cbBloqItens.Checked,
-  o que dispara cbBloqItensClick, que chama LiturgiaCalendarClick e só então
-  monta os itens. Lendo do arquivo, consultar pela API funciona com o programa
-  recém-aberto.
+  A lista é lida direto do liturgia.ja, e não da tela. Isso é proposital: a
+  lista da aba Liturgia só passa a ter conteúdo quando o operador a abre pela
+  primeira vez - tsLiturgiaShow atribui cbBloqItens.Checked, o que dispara
+  cbBloqItensClick, que chama LiturgiaCalendarClick e só então monta os itens.
+  Lendo do arquivo, consultar pela API funciona com o programa recém-aberto.
 
-  Abrir um item, ao contrário, depende dos painéis, porque reaproveita o mesmo
-  handler que o clique do operador usa. Por isso v2LiturgyAbre garante o
-  carregamento antes.
+  Consequência disso: a ordem devolvida pelo "list" pode estar transitória
+  enquanto um item está sendo criado pelo diálogo de item - ele grava o item no
+  FIM e só depois a posição pedida é aplicada. É leitura sem efeito, e recusá-la
+  enquanto um diálogo está aberto seria pior que devolver uma ordem que muda em
+  seguida.
+
+  Abrir um item NÃO depende mais de painel nenhum: o executaItemLiturgia recebe
+  a chave e o tag. Antes era um handler de clique, e a API precisava achar o
+  painel do item na tela e trocar o Tag dele - o que exigia que a aba estivesse
+  montada.
 }
 procedure TfTransmitir.v2Liturgy(ARequestInfo: TIdHTTPRequestInfo;
   AResponseInfo: TIdHTTPResponseInfo; const acao: string);
 var
   acaoPedida, itens, semanaTxt: string;
   semana, total: Integer;
+  modo: TAcaoItem;
 begin
   acaoPedida := v2Acao(ARequestInfo);
 
@@ -3094,9 +3115,18 @@ begin
     Exit;
   end;
 
+  if (acaoPedida = 'reload') then
+  begin
+    if not v2ExigeMetodo(ARequestInfo, AResponseInfo, acao, 'POST') then
+      Exit;
+    v2LiturgyRecarrega(AResponseInfo, acao);
+    Exit;
+  end;
+
   if (acaoPedida <> 'list') then
   begin
-    respondeV2AcaoInvalida(AResponseInfo, acao, 'list (GET); open (POST)');
+    respondeV2AcaoInvalida(AResponseInfo, acao,
+      'list (GET); open (POST); reload (POST)');
     Exit;
   end;
 
@@ -3189,10 +3219,34 @@ begin
               end;
             end;
 
+            {
+              O MODO DE ABERTURA do item: como o clique no corpo dele abre a
+              música. É campo ACRESCENTADO -- nada aqui foi renomeado,
+              reordenado ou removido, e o code LITURGY_LIST não mudou.
+
+              Sai SEMPRE preenchido com o modo efetivo, nunca vazio nem nulo:
+              a chave "modo" AUSENTE é o padrão (slide cantado), e é isso que
+              preserva byte a byte toda liturgia gravada antes de o campo
+              existir. Um cliente que lesse "sem modo" como um estado próprio
+              sobrescreveria a escolha do operador ao gravar.
+
+              Quem resolve ausência e valor inválido é o ModoDoParam, que é o
+              mesmo que a tela usa (e que recusa o acLetra, porque "letra" não
+              é um jeito de abrir a música por padrão). A leitura não é
+              reimplementada aqui.
+
+              Vão os dois: o número, que é o que se grava de volta, e o nome,
+              que é o que o resto da v2 faz quando devolve um estado legível.
+            }
+            modo := ModoDoParam(
+              fmIndex.lerParam(chave, CHAVE_MODO, '', fmIndex.arq_liturgia));
+
             extra :=
               ',"song_id":' + IntToStr(idMusica) +
               ',"choose_song":' + IfThen(escolhe, 'true', 'false') +
-              ',"has_playback":' + IfThen(temPlayback, 'true', 'false');
+              ',"has_playback":' + IfThen(temPlayback, 'true', 'false') +
+              ',"mode":' + IntToStr(TagDaAcao(modo)) +
+              ',"mode_name":"' + escapaJson(NomeDaAcao(modo)) + '"';
           end;
 
           if (itens <> '') then
@@ -3225,6 +3279,70 @@ begin
     '"week":' + IntToStr(semana) +
     ',"count":' + IntToStr(total) +
     ',"items":[' + itens + ']');
+end;
+
+{
+  Recompõe a lista da liturgia a partir do arquivo.
+
+  É POST porque altera o programa, e é idempotente: repetir não alterna nada,
+  como a convenção manda.
+
+  NÃO é um caminho próprio de recarga. Chama fmIndex.recarregaLiturgia, que
+  relê a ordem do arquivo e usa o MESMO desenhaLiturgia da tela, com a mesma
+  âncora de rolagem (o item que está no topo continua no topo, mesmo que entre
+  outro acima dele) e a mesma trava contra o clique a cavalo. Um segundo
+  caminho de recarga divergiria do primeiro.
+
+  Com o diálogo de item aberto a recarga é RECUSADA, com 409: aquele diálogo
+  tem o item carregado e vai reescrever a tela no OK, então recompor por baixo
+  dele seria desfeito pelo clique seguinte do operador. 409 é o que a convenção
+  reserva para "o estado do programa impede". Esperar seria pior: o prazo de 15
+  segundos estouraria e o cliente receberia 503, que significa "não deu para
+  confirmar", deixando-o sem saber se a recarga aconteceu.
+}
+procedure TfTransmitir.v2LiturgyRecarrega(
+  AResponseInfo: TIdHTTPResponseInfo; const acao: string);
+var
+  recompos, emOperacao: Boolean;
+begin
+  recompos := False;
+  emOperacao := False;
+
+  if not executaNaInterface(
+    procedure
+    begin
+      emOperacao := fmIndex.liturgiaEmOperacao;
+      if emOperacao then
+        Exit;
+
+      recompos := fmIndex.recarregaLiturgia;
+    end, TIMEOUT_COMANDO) then
+  begin
+    respondeV2Ocupado(AResponseInfo, acao);
+    Exit;
+  end;
+
+  if emOperacao then
+  begin
+    respondeV2Erro(AResponseInfo, 409, acao, 'LITURGY_EDIT_OPEN',
+      'A liturgia está sendo editada no programa agora. ' +
+      'Repita a recarga depois que a janela de item for fechada.');
+    Exit;
+  end;
+
+  //Nenhum dia aberto: não havia o que recompor. Não é erro -- mas também não
+  //se responde um ok genérico mentindo que repintou. Em "ok" o code descreve
+  //o estado, e é isso que ele faz aqui.
+  if not recompos then
+  begin
+    respondeV2Ok(AResponseInfo, acao, 'LITURGY_NOT_LOADED',
+      'Nenhum dia de liturgia está aberto, então não havia lista para ' +
+      'recompor.', '"reloaded":false');
+    Exit;
+  end;
+
+  respondeV2Ok(AResponseInfo, acao, 'LITURGY_RELOADED',
+    'Lista da liturgia recomposta a partir do arquivo.', '"reloaded":true');
 end;
 
 //Em que dia da semana o item está. Zero quando não aparece em nenhum.
