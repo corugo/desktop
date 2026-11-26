@@ -2336,6 +2336,14 @@ type
     function seloLiturgia: string;
     procedure invalidaCacheLiturgia;
     function dataDoDiaLiturgia(const diaSemana: string): TDateTime;
+    //A anotacao de cada dia, que mora DENTRO da liturgia. Ver o comentario
+    //do anotacaoDoDia.
+    function rtfDoEditorAnotacao: string;
+    procedure poeRtfNoEditorAnotacao(const rtf: string);
+    function anotacaoDoDia(dia: Integer): string;
+    procedure gravaAnotacaoDoDia(dia: Integer; const rtf: string);
+    function caminhoAnotacaoAntiga(dia: Integer): string;
+    procedure migraAnotacaoAntiga(dia: Integer);
     function caminhoLiturgiaJson: string;
     function leTextoDeArquivo(const caminho: string): string;
     function leLiturgiaJson: TLiturgiaArq;
@@ -2351,6 +2359,7 @@ type
     function pastaArquivosAvulsa: string;
     function pacoteAvulsaAtivo: string;
     procedure limpaDiaAvulsa;
+    function avulsaTemConteudo: Boolean;
     procedure carregaPacoteAvulsa(const origem: string; sessao: Boolean);
     procedure sincronizaAvulsaNoPacote(atualizaTela: Boolean = True);
     //O funil de "o conteudo da liturgia mudou": converte e sincroniza.
@@ -14967,9 +14976,10 @@ begin
   loadCol.Strings.Values['LITURGIA:SEMANA'] := inttostr(dia_semana);
   abasDias.ativo := dia_semana;
 
-  RichEdit1.Lines.Clear;
-  if FileExists(dir_dados+'AnotacoesLiturgia_'+IntToStr(dia_semana)+'.rtf') then
-    RichEdit1.Lines.LoadFromFile(dir_dados+'AnotacoesLiturgia_'+IntToStr(dia_semana)+'.rtf');
+  //A migracao vem ANTES da leitura, senao o dia que ainda esta no arquivo
+  //solto apareceria em branco nesta abertura e so no proximo dia certo.
+  migraAnotacaoAntiga(dia_semana);
+  poeRtfNoEditorAnotacao(anotacaoDoDia(dia_semana));
   RichEdit1.DefaultFont.Name := 'Tahoma';
   fcTxtI1.FontName := RichEdit1.DefaultFont.Name;
   seTxtITamanho1.Text := IntToStr(RichEdit1.DefaultFont.Size);
@@ -15532,9 +15542,152 @@ begin
   end;
 end;
 
+{
+  A ANOTACAO DE CADA DIA MORA DENTRO DA LITURGIA.
+
+  Antes era um arquivo por dia em dir_dados (AnotacoesLiturgia_<dia>.rtf), e
+  o efeito pratico disso era que ela NAO VIAJAVA: exportar a liturgia ou
+  montar um .llja levava os itens e deixava o texto para tras, o que para
+  quem monta o culto em casa e justamente a parte que precisa chegar na
+  igreja. Agora ela e propriedade do dia, como o nome e a cor.
+
+  ONDE FICA: secao SECAO_ANOTACOES do proprio arquivo de liturgia, chave =
+  numero do dia. Por ser uma secao comum, a leitura e a gravacao sao o
+  lerParam/gravaParam que o resto da liturgia ja usa -- e com isso ela entra
+  de graca no cache de leitura, na conversao automatica para JSON, na
+  exportacao e na sincronizacao do pacote da Avulsa, sem um caminho de
+  codigo novo em nenhum dos cinco.
+
+  O FORMATO CONTINUA SENDO RTF, que e o que o editor da tela le e grava
+  nativamente (EM_STREAMIN/EM_STREAMOUT do Riched20). Ele sobrevive no JSON
+  como string, e o notes_format do envelope diz a quem le o arquivo de fora
+  o que aquela string e. Trocar por HTML ou Markdown exigiria um conversor
+  nosso nos dois sentidos -- o controle nao faz nenhum dos dois -- e
+  perderia fonte, tamanho e cor, que a barra de formatacao da tela oferece.
+
+  A quebra de linha e achatada na chave e desfeita na leitura (achataTexto /
+  expandeTexto do uLiturgiaTroca): o modelo de secoes guarda uma linha por
+  chave, e no JSON a anotacao sai com as quebras de verdade.
+}
+function TfmIndex.rtfDoEditorAnotacao: string;
+var
+  ms: TMemoryStream;
+  bytes: TBytes;
+begin
+  Result := '';
+
+  ms := TMemoryStream.Create;
+  try
+    //SaveToStream do RichEdit grava RTF cru pelo EM_STREAMOUT, sem passar
+    //por TEncoding nenhum -- e o mesmo que o SaveToFile fazia. O RTF e
+    //7-bit (o Riched20 escapa acento como \'xx), entao ler os bytes como
+    //ANSI devolve a string identica.
+    RichEdit1.Lines.SaveToStream(ms);
+
+    if (ms.Size > 0) then
+    begin
+      SetLength(bytes, ms.Size);
+      ms.Position := 0;
+      ms.ReadBuffer(bytes[0], ms.Size);
+      Result := TEncoding.ANSI.GetString(bytes);
+    end;
+  finally
+    ms.Free;
+  end;
+
+  //Editor vazio ainda produz um RTF com cabecalho e nada dentro. Guardar
+  //isso poria um "notes" de ~200 bytes de cabecalho em todo dia que o
+  //usuario apenas visitou.
+  if (Trim(RichEdit1.Text) = '') then
+    Result := '';
+end;
+
+procedure TfmIndex.poeRtfNoEditorAnotacao(const rtf: string);
+var
+  ms: TMemoryStream;
+  bytes: TBytes;
+begin
+  RichEdit1.Lines.Clear;
+
+  if (Trim(rtf) = '') then
+    Exit;
+
+  ms := TMemoryStream.Create;
+  try
+    bytes := TEncoding.ANSI.GetBytes(rtf);
+    ms.WriteBuffer(bytes[0], Length(bytes));
+    ms.Position := 0;
+    RichEdit1.Lines.LoadFromStream(ms);
+  finally
+    ms.Free;
+  end;
+end;
+
+function TfmIndex.anotacaoDoDia(dia: Integer): string;
+begin
+  Result := expandeTexto(lerParam(SECAO_ANOTACOES, IntToStr(dia), '',
+                                  arq_liturgia));
+end;
+
+procedure TfmIndex.gravaAnotacaoDoDia(dia: Integer; const rtf: string);
+begin
+  //Nao regrava o que nao mudou: o RichEdit1Exit dispara a cada saida de
+  //foco, e cada gravacao aqui dispara a conversao para JSON e a
+  //sincronizacao do pacote da Avulsa.
+  if (anotacaoDoDia(dia) = rtf) then
+    Exit;
+
+  if (Trim(rtf) = '')
+    then apagaParam(SECAO_ANOTACOES, IntToStr(dia), arq_liturgia)
+    else gravaParam(SECAO_ANOTACOES, IntToStr(dia), achataTexto(rtf),
+                    arq_liturgia);
+end;
+
+function TfmIndex.caminhoAnotacaoAntiga(dia: Integer): string;
+begin
+  Result := dir_dados + 'AnotacoesLiturgia_' + IntToStr(dia) + '.rtf';
+end;
+
+//Traz para dentro da liturgia a anotacao que ficou no arquivo solto da
+//versao anterior. Sem isto, quem ja usava o recurso abriria a tela e
+//encontraria o texto dele em branco.
+//
+//O .rtf e RENOMEADO depois de a gravacao dar certo, e e ele que serve de
+//marca de "ja migrado": sem isso, limpar a anotacao na tela faria a abertura
+//seguinte importar o arquivo de novo e o texto apagado voltaria. Renomear e
+//nao apagar porque o arquivo e do usuario.
+procedure TfmIndex.migraAnotacaoAntiga(dia: Integer);
+var
+  antigo, rtf: string;
+begin
+  antigo := caminhoAnotacaoAntiga(dia);
+
+  if not FileExists(antigo) then
+    Exit;
+
+  //A liturgia manda: anotacao ja gravada la nao e sobrescrita pelo
+  //arquivo antigo.
+  if (anotacaoDoDia(dia) <> '') then
+    Exit;
+
+  try
+    RichEdit1.Lines.LoadFromFile(antigo);
+    rtf := rtfDoEditorAnotacao;
+
+    if (rtf <> '') then
+      gravaAnotacaoDoDia(dia, rtf);
+
+    RenameFile(antigo, antigo + '.migrado');
+  except
+    on E: Exception do
+      gravaLog('migraAnotacaoAntiga(' + IntToStr(dia) + '): '
+               + E.ClassName + ' - ' + E.Message);
+  end;
+end;
+
 procedure TfmIndex.RichEdit1Exit(Sender: TObject);
 begin
-  RichEdit1.Lines.SaveToFile(dir_dados+'AnotacoesLiturgia_'+loadCol.Strings.Values['LITURGIA:SEMANA']+'.rtf');
+  gravaAnotacaoDoDia(diaLiturgiaAberto, rtfDoEditorAnotacao);
 end;
 
 procedure TfmIndex.mmBDKeyUp(Sender: TObject; var Key: Word;
@@ -18620,6 +18773,18 @@ begin
 
   gravaParam('Geral', IntToStr(DIA_AVULSA), '', arq_liturgia);
 
+  //A anotacao e propriedade do dia e some com ele: deixar o texto para tras
+  //faria ele aparecer em cima da proxima liturgia carregada na guia.
+  apagaParam(SECAO_ANOTACOES, IntToStr(DIA_AVULSA), arq_liturgia);
+end;
+
+//A guia Avulsa tem alguma coisa? Item ou anotacao -- anotacao sozinha conta,
+//porque e conteudo que o usuario digitou e que precisa sobreviver.
+function TfmIndex.avulsaTemConteudo: Boolean;
+begin
+  Result := (Trim(lerParam('Geral', IntToStr(DIA_AVULSA), '',
+                           arq_liturgia)) <> '')
+         or (Trim(anotacaoDoDia(DIA_AVULSA)) <> '');
 end;
 
 //Abre um pacote e poe o conteudo dele na guia Avulsa.
@@ -18746,7 +18911,7 @@ begin
   if avulsaPendente or sincronizandoAvulsa then
     Exit;
 
-    avulsaPendente := True;
+  avulsaPendente := True;
 
   //Sem janela ainda (gravação durante a criação do form) não há para onde
   //postar: sincroniza na hora, que nesse momento não tem ação pela metade.
@@ -18861,13 +19026,31 @@ begin
   if sincronizandoAvulsa then
     Exit;
 
-  //Sem pacote aberto nesta sessão não há o que sincronizar: a guia Avulsa
-  //está vazia ou nem foi aberta.
-  if not DirectoryExists(pastaExtracaoAvulsa) then
-    Exit;
+  //Sem pacote ainda. Duas situações caem aqui, e elas pedem coisas opostas:
+  //
+  //  - a guia Avulsa TEM conteúdo e não existe .llja nenhum: é liturgia
+  //    avulsa montada à mão, do zero. O pacote é CRIADO a partir dela.
+  //    Sem isto o garanteArquivosAvulsa esvaziava a guia na abertura
+  //    seguinte, calado, porque o .llja é a fonte dela -- o item criado
+  //    aparecia, funcionava, e desaparecia no reinício;
+  //
+  //  - a guia está vazia, ou nem foi aberta: não há o que gravar, e um
+  //    pacote vazio seria lixo na pasta de liturgias.
+  //
+  //A GUARDA É O DIA 8 TER CONTEÚDO, e isso não é detalhe: o
+  //pedeSincronizaAvulsa é chamado em TODA gravação de liturgia, de qualquer
+  //dia -- não há filtro por dia em ponto nenhum do caminho. Sem conferir,
+  //editar a quarta-feira criaria um avulsa.llja vazio.
+  if not DirectoryExists(pastaExtracaoAvulsa) or
+     not FileExists(pacoteAvulsaAtivo) then
+  begin
+    if not avulsaTemConteudo then
+      Exit;
 
-  if not FileExists(pacoteAvulsaAtivo) then
-    Exit;
+    //O resto da rotina grava o pacote normalmente; o que falta é o chão.
+    ForceDirectories(ExtractFilePath(pacoteAvulsaAtivo));
+    ForceDirectories(pastaArquivosAvulsa);
+  end;
 
   sincronizandoAvulsa := True;
   try
@@ -19034,7 +19217,12 @@ begin
 
   if not FileExists(pacoteAvulsaAtivo) then
   begin
-    limpaDiaAvulsa;
+    //Sem pacote, mas com conteúdo na guia: é Avulsa montada à mão -- ou
+    //vinda de uma versão em que isso se perdia. Em vez de esvaziar, PEDE a
+    //sincronização, que cria o pacote a partir dela.
+    if avulsaTemConteudo
+      then pedeSincronizaAvulsa
+      else limpaDiaAvulsa;
 
     Exit;
   end;

@@ -224,7 +224,16 @@ begin
     begin
       //O [Geral] nunca viaja: a ordem dos dias e o AlteraOrdem sao
       //reconstruidos pelo aplicaEm a partir da estrutura do envelope.
-      if SameText(secoes[i], 'Geral') or (usadas.IndexOf(secoes[i]) >= 0) then
+      //
+      //A secao da ANOTACAO tambem fica fora, e aqui o motivo e outro: ela
+      //nao e referenciada por nenhum dia (nao e item), entao cairia aqui
+      //como secao solta -- e ela JA viaja, no "notes" de cada dia. Sair nos
+      //dois lugares nao e so ruido: o carregaSecoesSoltas roda DEPOIS do
+      //aplicaColecaoEm, entao a copia solta sobrescreveria a boa, e um dia
+      //que deixou de ter itens ressuscitaria a anotacao antiga dele.
+      if SameText(secoes[i], 'Geral') or
+         SameText(secoes[i], SECAO_ANOTACOES) or
+         (usadas.IndexOf(secoes[i]) >= 0) then
         Continue;
 
       bloco := '    "' + escapaTextoJson(secoes[i]) + '": {' + sLineBreak;

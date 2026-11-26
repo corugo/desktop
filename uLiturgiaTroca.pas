@@ -64,6 +64,22 @@ const
   //guia Avulsa.
   SUFIXO_IDENT_AVULSO = '_avulso';
 
+  //Secao reservada do modelo de secoes que guarda a ANOTACAO de cada dia:
+  //chave = numero do dia no dominio do INI (1..8). Nao e item e nao entra na
+  //ordem do [Geral] -- e propriedade do dia, como o nome e a cor.
+  //
+  //POR QUE UMA SECAO, E NAO UM CAMPO SOLTO: tudo que viaja entre o arquivo e
+  //este conversor passa pelo modelo de secoes (ver o cabecalho), inclusive no
+  //caminho do JSON, porque o TLiturgiaArq descende de TMemIniFile. Com a
+  //anotacao numa secao, o fmMenu le e grava ela com o lerParam/gravaParam que
+  //ja existe -- e de graca ela entra no cache de leitura, na conversao
+  //automatica para JSON, na exportacao e na sincronizacao do pacote da Avulsa,
+  //sem um caminho de codigo novo em nenhum dos quatro.
+  //
+  //O ':' no nome e o que garante que ela nunca colide com id de item: o
+  //identSeguro troca ':' por '_', entao nenhum id pode se chamar assim.
+  SECAO_ANOTACOES = 'LITURGIA:ANOTACOES';
+
   //Nomes dos dias no dominio do INI (1 = domingo), usados no "name" de cada
   //liturgia. Ficam aqui, na unit pura, para existirem num lugar so -- antes
   //viviam na implementation do fmCopiaLiturgiaDia e ninguem alcancava.
@@ -150,6 +166,11 @@ type
     nome: string;
     corHex: string;
     vinculo: TVinculoTroca;
+
+    //Anotacao do dia, como o usuario digitou -- com as quebras de linha de
+    //verdade. Hoje chega aqui em RTF, que e o que o editor da tela produz; o
+    //formato e derivado do conteudo pelo formatoDaAnotacao, nao guardado.
+    anotacao: string;
 
     constructor Create;
     destructor Destroy; override;
@@ -254,6 +275,31 @@ function aplicaColecaoEm(col: TColecaoTroca; doc: TCustomIniFile): Integer;
 //Escapa o texto para entrar entre aspas num JSON.
 function escapaTextoJson(const txt: string): string;
 
+//A anotacao e texto de VARIAS linhas, e o modelo de secoes guarda uma linha
+//por chave. Estas duas convertem nos dois sentidos, com escape inequivoco:
+//a contrabarra vira duas, e as quebras viram \r e \n.
+//
+//O PAR EXISTE PELO LADO DO INI, nao pelo do JSON. No JSON a anotacao sai com
+//quebra de linha de verdade, escapada uma vez so pelo escapaTextoJson -- e
+//aquele e o arquivo que o usuario cola em %APPDATA% e que uma ferramenta de
+//fora gera, entao ali ela tem de estar limpa, nao escapada duas vezes. O
+//achatamento e desfeito na entrada e refeito na saida, de forma que o
+//liturgia.ja (INI) nunca receba uma quebra de linha dentro de um valor, que
+//o quebraria.
+//
+//DOBRAR A CONTRABARRA e necessario porque a anotacao e RTF, que e cheia
+//delas: sem escapar o escape, um \nosupersub do RTF voltaria da leitura como
+//quebra de linha seguida de 'osupersub'.
+function achataTexto(const txt: string): string;
+function expandeTexto(const txt: string): string;
+
+//Em que formato a anotacao esta: 'rtf' quando comeca com {\rtf, senao 'text'.
+//
+//E DERIVADO DO CONTEUDO, e nao um campo guardado, para nao haver duas
+//verdades sobre a mesma string. Viaja no JSON como informacao para quem le o
+//arquivo de fora; na leitura e ignorado, porque o conteudo manda.
+function formatoDaAnotacao(const txt: string): string;
+
 //Par "nome": "valor", com os dois escapados.
 function jsonParTexto(const recuo, nome, valor: string): string;
 
@@ -311,6 +357,51 @@ begin
         else Result := Result + c;
     end;
   end;
+end;
+
+function achataTexto(const txt: string): string;
+begin
+  Result := StringReplace(txt, '\', '\\', [rfReplaceAll]);
+  Result := StringReplace(Result, #13, '\r', [rfReplaceAll]);
+  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+end;
+
+function expandeTexto(const txt: string): string;
+var
+  i: Integer;
+begin
+  Result := '';
+  i := 1;
+
+  while (i <= Length(txt)) do
+  begin
+    if (txt[i] = '\') and (i < Length(txt)) then
+    begin
+      case txt[i + 1] of
+        '\': Result := Result + '\';
+        'r': Result := Result + #13;
+        'n': Result := Result + #10;
+      else
+        //Contrabarra que nao abre escape nosso volta como veio, junto com o
+        //caractere seguinte. Nao e erro: e o caso de alguem ter editado a
+        //chave a mao, e devolver o texto intacto e melhor que adivinhar.
+        Result := Result + txt[i] + txt[i + 1];
+      end;
+
+      Inc(i, 2);
+      Continue;
+    end;
+
+    Result := Result + txt[i];
+    Inc(i);
+  end;
+end;
+
+function formatoDaAnotacao(const txt: string): string;
+begin
+  if SameText(Copy(Trim(txt), 1, 5), '{\rtf')
+    then Result := 'rtf'
+    else Result := 'text';
 end;
 
 function jsonParTexto(const recuo, nome, valor: string): string;
@@ -823,6 +914,14 @@ begin
   doc.WriteString('Geral', IntToStr(dia), ordem);
   doc.WriteString('Geral', 'AlteraOrdem-' + IntToStr(dia),
                   FormatDateTime('dd/mm/yyyy hh:nn:ss', Now));
+
+  //A anotacao e propriedade do dia, entao vai junto -- e e APAGADA quando a
+  //liturgia que esta entrando nao tem nenhuma. Sem o else, importar um
+  //pacote sem anotacao deixaria a anotacao antiga daquele dia no lugar, e o
+  //usuario veria o texto de outra liturgia.
+  if (anotacao <> '')
+    then doc.WriteString(SECAO_ANOTACOES, IntToStr(dia), achataTexto(anotacao))
+    else doc.DeleteKey(SECAO_ANOTACOES, IntToStr(dia));
 end;
 
 function TLiturgiaTroca.corpoJson(const recuo: string;
@@ -836,6 +935,15 @@ begin
 
   Result := jsonParTexto(recuo, 'name', nome) + ',' + sLineBreak
           + jsonParTexto(recuo, 'color', corHex) + ',' + sLineBreak;
+
+  //A anotacao do dia. NAO sai quando esta vazia, que e o caso comum: um
+  //"notes": "" em cada um dos oito dias seria ruido num arquivo que o
+  //usuario le e cola na mao.
+  if (anotacao <> '') then
+    Result := Result
+            + jsonParTexto(recuo, 'notes', anotacao) + ',' + sLineBreak
+            + jsonParTexto(recuo, 'notes_format',
+                           formatoDaAnotacao(anotacao)) + ',' + sLineBreak;
 
   if (comVinculo and vinculo.presente) then
   begin
@@ -1133,6 +1241,11 @@ begin
     if (Trim(Result.corHex) = '') then
       Result.corHex := COR_HEX_PADRAO;
 
+    //O notes_format NAO e lido de proposito: o formato e derivado do
+    //conteudo (ver formatoDaAnotacao), e aceitar a declaracao do arquivo
+    //abriria a porta para ela discordar da string que vem junto.
+    Result.anotacao := textoDoValor(obj.GetValue('notes'));
+
     leVinculo(obj, Result.vinculo);
 
     v := obj.GetValue('items');
@@ -1224,6 +1337,8 @@ begin
   Result := TLiturgiaTroca.Create;
   try
     Result.nome := nome;
+    Result.anotacao := expandeTexto(
+                         doc.ReadString(SECAO_ANOTACOES, IntToStr(dia), ''));
 
     ordem := TStringList.Create;
     try
@@ -1276,18 +1391,27 @@ function colecaoDoArquivo(doc: TCustomIniFile): TColecaoTroca;
 var
   dia: Integer;
   lit: TLiturgiaTroca;
+  temItens, temAnotacao: Boolean;
 begin
   Result := TColecaoTroca.Create;
   try
     for dia := PRIMEIRO_DIA to ULTIMO_DIA do
     begin
-      if (Trim(doc.ReadString('Geral', IntToStr(dia), '')) = '') then
+      //O dia entra quando tem item OU anotacao. A anotacao sozinha conta:
+      //dia sem item nenhum e com texto digitado e estado legitimo, e sair
+      //daqui pela primeira guarda perderia o texto na gravacao seguinte.
+      temItens := Trim(doc.ReadString('Geral', IntToStr(dia), '')) <> '';
+      temAnotacao := Trim(doc.ReadString(SECAO_ANOTACOES,
+                                         IntToStr(dia), '')) <> '';
+
+      if not temItens and not temAnotacao then
         Continue;
 
       lit := liturgiaDoDia(doc, dia, NOMES_DIAS[dia]);
       try
-        //Dia que tem a chave no [Geral] mas nenhum item nao merece entrada.
-        if (lit.itens.Count = 0) then
+        //Dia que tem a chave no [Geral] mas nenhum item nem anotacao nao
+        //merece entrada.
+        if (lit.itens.Count = 0) and (lit.anotacao = '') then
         begin
           FreeAndNil(lit);
           Continue;
