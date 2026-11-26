@@ -87,11 +87,17 @@ const
   //LARG_BARRA e MIN_POLEGAR saíram para o uBarraRolagem: o menu de músicas
   //desenha a mesma barra, e medida repetida em dois lugares é fazenda de bug.
 
-  //De quanto em quanto o botão da ponta rola, e o ritmo da repetição
-  //enquanto ele fica apertado.
-  PASSO_BOTAO = 40;
+  //O ritmo da repetição enquanto o botão da ponta fica apertado. De
+  //QUANTO ele rola não é constante: é o passoDeUmItem, o mesmo da
+  //rodinha do mouse -- as duas pontas têm de rolar igual, senão a lista
+  //anda uma medida pelo botão e outra pela roda.
+  //
+  //O 110 saiu de medição: com o passo de um item (57px) os 60ms de antes dariam
+  //950px/s, mais rápido que os 666px/s do passo fixo de 40px que havia aqui --
+  //ou seja, trocar o passo acelerou o segurar sem ninguém pedir. 110ms dão ~9
+  //itens por segundo, que é o ritmo de passar os olhos por uma lista.
   MS_PRIMEIRA_REPETICAO = 400;
-  MS_REPETICAO = 60;
+  MS_REPETICAO = 110;
 
   //A barra na borda esquerda do item que esta sendo reproduzido.
   LARG_BARRA_NO_AR = 3;
@@ -208,6 +214,9 @@ type
 
     procedure recalcula;
     function topoMaximo: Integer;
+    //De quanto a lista anda num tique de rolagem -- a roda do mouse e o
+    //botão da ponta da barra usam este mesmo valor.
+    function passoDeUmItem: Integer;
     //O ident do item que esta no topo da area visivel, e em `dentro` quantos
     //pixels do topo da rolagem caem dentro dele. E a ancora da rolagem.
     function identDoTopoVisivel(out dentro: Integer): string;
@@ -545,6 +554,15 @@ begin
     Result := 0;
 end;
 
+//A altura da linha varia (divisória é mais baixa), então o passo é a medida
+//do item COMUM e não a do item que estiver no topo: tirar a medida do item de
+//baixo do cursor daria velocidade irregular, mudando conforme o que passa.
+//O +1 é a linha separadora, que faz parte da faixa de cada item.
+function TListaLiturgia.passoDeUmItem: Integer;
+begin
+  Result := uItensLiturgia.ALTURA_ITEM + 1;
+end;
+
 function TListaLiturgia.identDoTopoVisivel(out dentro: Integer): string;
 var
   i: Integer;
@@ -869,8 +887,8 @@ end;
 procedure TListaLiturgia.passoDaBarra(zona: TZonaBarra);
 begin
   case zona of
-    zbSobe:         poeTopo(FTopo - PASSO_BOTAO);
-    zbDesce:        poeTopo(FTopo + PASSO_BOTAO);
+    zbSobe:         poeTopo(FTopo - passoDeUmItem);
+    zbDesce:        poeTopo(FTopo + passoDeUmItem);
     zbPaginaAcima:  poeTopo(FTopo - ClientHeight);
     zbPaginaAbaixo: poeTopo(FTopo + ClientHeight);
   end;
@@ -1762,10 +1780,7 @@ end;
 function TListaLiturgia.DoMouseWheel(Shift: TShiftState;
   WheelDelta: Integer; MousePos: TPoint): Boolean;
 begin
-  //A altura varia, entao o tique rola por uma medida fixa em vez de "um
-  //item" -- com itens de alturas diferentes, um item por tique daria
-  //velocidade irregular.
-  poeTopo(FTopo - Round(WheelDelta / 120) * (uItensLiturgia.ALTURA_ITEM + 1));
+  poeTopo(FTopo - Round(WheelDelta / 120) * passoDeUmItem);
   Result := True;
 end;
 
