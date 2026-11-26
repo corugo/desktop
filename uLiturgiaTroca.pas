@@ -224,6 +224,11 @@ function tipoDoJson(const tipoJson: string): string;
 function diaParaJson(dia: Integer): Integer;
 function diaDoJson(dia: Integer): Integer;
 
+//O nome do dia SEM o "-feira", para a faixa de guias da liturgia, onde a
+//celula e estreita. Derivado do NOMES_DIAS em vez de uma tabela propria: duas
+//tabelas divergiriam, e so quatro dos oito tem o sufixo.
+function NomeCurtoDoDia(dia: Integer): string;
+
 //As propriedades deste dia. Ver TRegrasDoDia: e aqui que a Avulsa deixa de
 //ser excecao espalhada e passa a ser um dia com propriedades proprias.
 //Dia fora de PRIMEIRO_DIA..ULTIMO_DIA responde como dia da semana, que e o
@@ -521,6 +526,22 @@ end;
 function diaDoJson(dia: Integer): Integer;
 begin
   Result := dia + 1;
+end;
+
+function NomeCurtoDoDia(dia: Integer): string;
+var
+  p: Integer;
+begin
+  if (dia < PRIMEIRO_DIA) or (dia > ULTIMO_DIA) then
+  begin
+    Result := '';
+    Exit;
+  end;
+
+  Result := NOMES_DIAS[dia];
+  p := Pos('-', Result);
+  if (p > 1) then
+    Result := Copy(Result, 1, p - 1);
 end;
 
 function RegrasDoDia(dia: Integer): TRegrasDoDia;

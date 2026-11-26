@@ -20,7 +20,8 @@ uses
   BusinessSkinForm, bsSkinMenus, bsSkinCtrls, bsSkinTabs, bsButtonGroup,
   bsSkinBoxCtrls, bsSkinExCtrls, bsribbon, bsdbctrls, bsSkinShellCtrls,
   bsSkinGrids, bsDBGrids, bsColorCtrls, bsPngImageList,
-  uTema, uControles, uItensLiturgia, uListaLiturgia, uMenuMusicas;
+  uTema, uControles, uItensLiturgia, uListaLiturgia, uMenuMusicas,
+  uAbasDias;
   (*"MidasLib" NECESSÁRIA PARA EVITAR ERRO DE ACCESS VIOLATION NO DM.cds*)
 
 const
@@ -657,22 +658,6 @@ type
     lblDoxologiaCate: TbsSkinLabel;
     btErro: TbsSkinButton;
     tsLiturgia: TbsSkinTabSheet;
-    GridPanel23: TGridPanel;
-    lcal_2: TbsSkinSpeedButton;
-    lcal_3: TbsSkinSpeedButton;
-    lcal_4: TbsSkinSpeedButton;
-    lcal_5: TbsSkinSpeedButton;
-    lcal_6: TbsSkinSpeedButton;
-    lcal_7: TbsSkinSpeedButton;
-    lcal_1: TbsSkinSpeedButton;
-    lcal_8: TbsSkinSpeedButton;
-    divLitAvulsa: TbsRibbonDivider;
-    bsRibbonDivider9: TbsRibbonDivider;
-    bsRibbonDivider13: TbsRibbonDivider;
-    bsRibbonDivider15: TbsRibbonDivider;
-    bsRibbonDivider17: TbsRibbonDivider;
-    bsRibbonDivider19: TbsRibbonDivider;
-    bsRibbonDivider21: TbsRibbonDivider;
     mmLiturgia: TbsSkinMemo;
     bsSkinPanel3: TbsSkinPanel;
     bsSkinButton34: TbsSkinButton;
@@ -1717,7 +1702,6 @@ type
     procedure carregaParams();
     function GetComputerNameFunc: string;
     procedure BitmapFileToPNG(const Source, Dest: string);
-    procedure LiturgiaCalendarClick(Sender: TObject);
     function verificaURL(url: string; input: TbsSkinEdit; reverso: Boolean = False): string;
     procedure sListView1DblClick(Sender: TObject);
     procedure expandirArea(Sender: TObject);
@@ -2003,6 +1987,9 @@ type
     //Le a paleta do skin e a joga no uTema. Ponto unico.
     procedure aplicaTemaDaInterface;
     procedure montaListaLiturgia;
+    procedure montaAbasDias;
+    procedure abasEscolheuDia(Sender: TObject; dia: Integer);
+    procedure abreDiaLiturgia(dia: Integer; salvaAnotacoes: Boolean = True);
     //Le os parametros de um item e devolve o modelo dele.
     function itemDaLiturgia(const item: string;
       ordem: Integer): TItemLiturgia;
@@ -2262,6 +2249,9 @@ type
     //A lista da liturgia: um controle desenhado, no lugar do TbsSkinScrollBox
     //com um painel clonado por item. Criado no FormCreate.
     listaLiturgia: TListaLiturgia;
+    //A faixa de dias: um controle desenhado, no lugar do GridPanel23 com os
+    //oito TbsSkinSpeedButton e os sete TbsRibbonDivider. Criada no FormCreate.
+    abasDias: TAbasDias;
     FLogChamadas: Integer;  // contador para checagem de truncamento do louvorja.log
     arquivo_recebido: string;  // caminho enviado por outra instância (WM_COPYDATA)
     //Pacote .llja aberto pelo Windows nesta sessão. Vazio = a guia Avulsa
@@ -2524,6 +2514,7 @@ begin
   FLitClipboard := TStringList.Create;
   FLitClipboardSemana := 0;
 
+  montaAbasDias;
   montaListaLiturgia;
 end;
 
@@ -8592,7 +8583,7 @@ begin
   else
     gravaParam('Liturgia', 'BloquearItens', '0');
 
-  LiturgiaCalendarClick(nil);
+  abreDiaLiturgia(DayOfWeek(Now), False);
   btApagaLitSel.Enabled := not cbBloqItens.Checked;
 end;
 
@@ -14908,21 +14899,73 @@ begin
   end
 end;
 
-procedure TfmIndex.LiturgiaCalendarClick(Sender: TObject);
+//A faixa de dias, montada em codigo. Substitui o GridPanel23 com os oito
+//TbsSkinSpeedButton e os sete TbsRibbonDivider -- ver o cabecalho do uAbasDias.
+//
+//Os nomes saem do NOMES_DIAS do uLiturgiaTroca, encurtados: uma fonte so, e um
+//nono dia, se um dia existir, entra na faixa sem caca a laco magico.
+procedure TfmIndex.montaAbasDias;
+const
+  //Os icones de cada dia, os MESMOS que os TbsSkinSpeedButton tinham no
+  //GridPanel23 -- conferidos no upstream, nao escolhidos de novo. Sao
+  //calendarios coloridos da ico_24x24: 39 vermelho (domingo), 40 cinza (dia
+  //comum), 43 amarelo (quarta) e 42 azul com estrela (sabado).
+  //
+  //A Avulsa e a unica escolha nova: ela estava com o 39, que e o do domingo, e
+  //dois dias com o mesmo icone nao distinguem nada. O 41 e o mesmo calendario
+  //em verde e estava livre.
+  ICONES_DIAS: array[PRIMEIRO_DIA..ULTIMO_DIA] of Integer =
+    (39, 40, 40, 43, 40, 40, 42, 41);
+var
+  i: Integer;
+  textos: array[PRIMEIRO_DIA..ULTIMO_DIA] of string;
+  dias: array[PRIMEIRO_DIA..ULTIMO_DIA] of Integer;
+  icones: array[PRIMEIRO_DIA..ULTIMO_DIA] of Integer;
+begin
+  for i := PRIMEIRO_DIA to ULTIMO_DIA do
+  begin
+    textos[i] := NomeCurtoDoDia(i);
+    dias[i] := i;
+    icones[i] := ICONES_DIAS[i];
+  end;
+
+  abasDias := TAbasDias.Create(Self);
+  abasDias.Parent := tsLiturgia;
+  abasDias.Align := alTop;
+  //Bem mais baixa que os 49px do GridPanel23: ali cada botao tinha 29px de
+  //altura com 10px de respiro em cima e embaixo, e sem botao nao ha o que
+  //justificar a sobra. A altura sai do icone, no uAbasDias.
+  abasDias.Height := ALT_ABAS_DIAS;
+  abasDias.imagens := DM.ico_24x24;
+  abasDias.defineDias(textos, dias, icones);
+  abasDias.OnEscolher := abasEscolheuDia;
+end;
+
+procedure TfmIndex.abasEscolheuDia(Sender: TObject; dia: Integer);
+begin
+  abreDiaLiturgia(dia);
+end;
+//Abrir um dia da liturgia. O CORPO, por NUMERO de dia.
+//
+//Partido do LiturgiaCalendarClick pela receita do expandirArea (secao 4k do
+//CLAUDE.md): antes o dia saia do Tag de um TbsSkinSpeedButton, e quem queria
+//abrir a Avulsa por codigo tinha de passar o PROPRIO botao (lcal_8). Sem os
+//botoes isso deixaria de existir, e o numero e o que esses chamadores sempre
+//quiseram dizer.
+procedure TfmIndex.abreDiaLiturgia(dia: Integer;
+  salvaAnotacoes: Boolean = True);
 var
   dia_semana: integer;
-  i: integer;
 begin
-  if Sender <> nil then
-    RichEdit1Exit(Sender);
+  //As anotacoes do dia que ESTAVA aberto sao salvas antes de trocar, porque o
+  //RichEdit1Exit grava no dia que estiver em LITURGIA:SEMANA -- logo abaixo
+  //essa chave muda. Ele nao le o Sender, entao nil serve.
+  if salvaAnotacoes then
+    RichEdit1Exit(nil);
 
-  if Sender = nil then
-    dia_semana := dayofweek(now())
-  else
-    dia_semana := TComponent(Sender).Tag;
+  dia_semana := dia;
   loadCol.Strings.Values['LITURGIA:SEMANA'] := inttostr(dia_semana);
-  for i := PRIMEIRO_DIA to ULTIMO_DIA do
-    TbsSkinSpeedButton(FindComponent('lcal_' + inttostr(i)) as TbsSkinSpeedButton).Down := (TbsSkinSpeedButton(FindComponent('lcal_' + inttostr(i)) as TbsSkinSpeedButton).Tag = dia_semana);
+  abasDias.ativo := dia_semana;
 
   RichEdit1.Lines.Clear;
   if FileExists(dir_dados+'AnotacoesLiturgia_'+IntToStr(dia_semana)+'.rtf') then
@@ -18399,7 +18442,7 @@ begin
   //Redesenha a tela a partir do arquivo novo. Diferente das outras seis
   //linhas do Importar/Exportar, aqui nao e preciso reiniciar o programa: a
   //liturgia e lida do arquivo a cada vez.
-  LiturgiaCalendarClick(nil);
+  abreDiaLiturgia(DayOfWeek(Now), False);
 end;
 
 //Exporta a liturgia inteira como liturgia.json no formato de troca.
@@ -18576,6 +18619,7 @@ begin
   end;
 
   gravaParam('Geral', IntToStr(DIA_AVULSA), '', arq_liturgia);
+
 end;
 
 //Abre um pacote e poe o conteudo dele na guia Avulsa.
@@ -18977,7 +19021,7 @@ begin
   end;
 
   abrePagina(tsLiturgia);
-  LiturgiaCalendarClick(lcal_8);
+  abreDiaLiturgia(DIA_AVULSA);
 end;
 
 //Carrega o pacote da Avulsa uma vez por execução, quando a guia é aberta.
@@ -18991,6 +19035,7 @@ begin
   if not FileExists(pacoteAvulsaAtivo) then
   begin
     limpaDiaAvulsa;
+
     Exit;
   end;
 
@@ -19340,7 +19385,7 @@ begin
     NOMES_DIAS[DIA_AVULSA] + '!'), TITULO, mb_ok + mb_iconinformation);
 
   //Mostra o resultado onde ele caiu, em vez de deixar o usuário procurar.
-  LiturgiaCalendarClick(lcal_8);
+  abreDiaLiturgia(DIA_AVULSA);
 end;
 
 procedure TfmIndex.btImportaLiturgiaClick(Sender: TObject);

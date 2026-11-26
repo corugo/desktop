@@ -51,7 +51,8 @@ uses
   uMenuMusicas in 'ui\musicas\uMenuMusicas.pas',
   uItensLiturgia in 'ui\liturgia\uItensLiturgia.pas',
   uTiposItem in 'ui\liturgia\uTiposItem.pas',
-  uListaLiturgia in 'ui\liturgia\uListaLiturgia.pas';
+  uListaLiturgia in 'ui\liturgia\uListaLiturgia.pas',
+  uAbasDias in 'ui\liturgia\uAbasDias.pas';
 
 {$R *.res}
 
