@@ -272,6 +272,21 @@ function colecaoDoArquivo(doc: TCustomIniFile): TColecaoTroca;
 //liturgia e ignorada, porque nao ha como saber o destino.
 function aplicaColecaoEm(col: TColecaoTroca; doc: TCustomIniFile): Integer;
 
+//Apaga as secoes dos itens que este dia cita, sem tocar na ordem nem em
+//mais nada. E o primeiro passo do aplicaEm, extraido porque o
+//removeDiaDaLiturgia precisa do MESMO passo -- duas copias divergiriam.
+procedure apagaSecoesDoDia(doc: TCustomIniFile; dia: Integer);
+
+//Tira o dia INTEIRO do documento: as secoes dos itens, a ordem no [Geral]
+//e a anotacao. O dia deixa de existir, e por isso nao e emitido pelo
+//colecaoDoArquivo nem sobra como secao solta no _secoes.
+//
+//Serve a exportacao, que tira a Avulsa do arquivo que sai. NAO substitui o
+//limpaDiaAvulsa do fmMenu: aquele esvazia a liturgia DE VERDADE, pelo
+//lerParam/gravaParam, que invalida cache e pede sincronizacao; este mexe
+//num documento que o chamador tem na mao.
+procedure removeDiaDaLiturgia(doc: TCustomIniFile; dia: Integer);
+
 //Escapa o texto para entrar entre aspas num JSON.
 function escapaTextoJson(const txt: string): string;
 
@@ -876,25 +891,13 @@ end;
 
 procedure TLiturgiaTroca.aplicaEm(doc: TCustomIniFile; dia: Integer);
 var
-  antigos: TStringList;
   i, k: Integer;
   it: TItemTroca;
   ordem: string;
 begin
   //Apaga as secoes do que havia neste dia, senao item removido continuaria
   //no arquivo depois de a ordem deixar de citar ele.
-  antigos := TStringList.Create;
-  try
-    antigos.Delimiter := ';';
-    antigos.StrictDelimiter := True;
-    antigos.DelimitedText := doc.ReadString('Geral', IntToStr(dia), '');
-
-    for i := 0 to antigos.Count - 1 do
-      if (Trim(antigos[i]) <> '') then
-        doc.EraseSection(Trim(antigos[i]));
-  finally
-    antigos.Free;
-  end;
+  apagaSecoesDoDia(doc, dia);
 
   ordem := '';
 
@@ -1386,6 +1389,34 @@ begin
 end;
 
 { ------------------------------------------------- a liturgia inteira }
+
+procedure apagaSecoesDoDia(doc: TCustomIniFile; dia: Integer);
+var
+  ids: TStringList;
+  i: Integer;
+begin
+  ids := TStringList.Create;
+  try
+    //StrictDelimiter porque o identSeguro garante id sem espaco e sem ';':
+    //sem ele o TStringList citaria o que nao precisa ser citado.
+    ids.Delimiter := ';';
+    ids.StrictDelimiter := True;
+    ids.DelimitedText := doc.ReadString('Geral', IntToStr(dia), '');
+
+    for i := 0 to ids.Count - 1 do
+      if (Trim(ids[i]) <> '') then
+        doc.EraseSection(Trim(ids[i]));
+  finally
+    ids.Free;
+  end;
+end;
+
+procedure removeDiaDaLiturgia(doc: TCustomIniFile; dia: Integer);
+begin
+  apagaSecoesDoDia(doc, dia);
+  doc.DeleteKey('Geral', IntToStr(dia));
+  doc.DeleteKey(SECAO_ANOTACOES, IntToStr(dia));
+end;
 
 function colecaoDoArquivo(doc: TCustomIniFile): TColecaoTroca;
 var

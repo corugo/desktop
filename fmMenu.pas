@@ -18615,6 +18615,26 @@ begin
     Exit;
   end;
 
+  //A AVULSA NAO VIAJA AQUI, e o aviso existe para isso nao ser surpresa.
+  //
+  //O motivo e de desenho, nao economia: a fonte da Avulsa e o .llja, e o
+  //dia 8 do liturgia.json e uma COPIA DE TRABALHO, reconstruida do pacote
+  //a cada execucao. Os itens dela apontam para caminhos absolutos dentro
+  //do dir_temp DESTA maquina, entao na outra eles nao abririam -- e, pior,
+  //a primeira abertura da guia la por cima disso: sem pacote, o
+  //garanteArquivosAvulsa esvazia a guia. Exportar o dia 8 seria prometer
+  //uma liturgia que o outro lado perde sem avisar.
+  //
+  //Quem leva uma avulsa e o Exportar Dia (.llja), que empacota os arquivos
+  //junto. O aviso so aparece quando ha o que deixar para tras.
+  if avulsaTemConteudo then
+    Application.MessageBox(
+      'As liturgias avulsas não serão exportadas!' + #13#10#13#10 +
+      'A liturgia avulsa fica guardada num arquivo .llja, junto com os ' +
+      'arquivos dela. Para levá-la, use o botão ''Exportar Dia'' na aba ' +
+      'de liturgia, com a guia Avulsa aberta.',
+      TITULO, mb_ok + mb_iconexclamation);
+
   Application.MessageBox(
     'Selecione o diretório onde deverá ser salvo o arquivo ''liturgia.json''!',
     TITULO, mb_ok + mb_iconinformation);
@@ -18627,25 +18647,34 @@ begin
   destino := IncludeTrailingPathDelimiter(pasta) + 'liturgia.json';
 
   try
-    if FileExists(caminhoLiturgiaJson) then
-    begin
-      if not CopyFile(PChar(caminhoLiturgiaJson), PChar(destino), False) then
-        raise Exception.Create('Não foi possível gravar o arquivo exportado!');
-    end
-    else
-    begin
-      doc := abreIniLiturgia;
+    //UM caminho so para os dois formatos internos, e nao mais a copia byte a
+    //byte quando a liturgia ja esta em JSON: o arquivo que sai tem de ficar
+    //SEM o dia da Avulsa, e para isso ele passa pelo modelo de secoes. O
+    //abreIniLiturgia ja resolve a precedencia do JSON sobre o INI, e o
+    //UpdateFile do TLiturgiaArq grava JSON nos dois casos.
+    doc := abreIniLiturgia;
+    try
+      saida := TLiturgiaArq.criaPara(destino);
       try
-        saida := TLiturgiaArq.criaPara(destino);
-        try
-          saida.copiaDe(doc);
-          saida.UpdateFile;
-        finally
-          saida.Free;
-        end;
+        saida.copiaDe(doc);
+        removeDiaDaLiturgia(saida, DIA_AVULSA);
+
+        //Depois de tirar a Avulsa, as secoes dela que o [Geral] nao citava
+        //ficariam ORFAS -- e secao orfa viaja no _secoes, levando o caminho
+        //absoluto do dir_temp desta maquina para dentro do arquivo
+        //exportado. Medido num teste sobre o arquivo real, nao suposto.
+        //
+        //Vale para as orfas que o arquivo ja tinha de antes tambem: o
+        //_secoes existe para o arquivo INTERNO nao perder a secao criada na
+        //janela em que o id ainda nao entrou no [Geral], e num arquivo que
+        //SAI daqui essa janela nao existe.
+        saida.tiraSecoesSoltas;
+        saida.UpdateFile;
       finally
-        doc.Free;
+        saida.Free;
       end;
+    finally
+      doc.Free;
     end;
   except
     on E: Exception do

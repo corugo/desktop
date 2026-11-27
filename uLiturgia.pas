@@ -36,6 +36,9 @@ type
   private
     procedure carregaJson(const texto: string);
     procedure carregaSecoesSoltas(const texto: string);
+    //Quais secoes do documento nenhum dia cita. A REGRA mora aqui, num
+    //lugar so: o secoesSoltasJson emite e o tiraSecoesSoltas apaga.
+    procedure achaSecoesSoltas(lista: TStringList);
     function secoesSoltasJson: string;
   public
     //Documento em memoria guardando o nome do arquivo para o UpdateFile, mas
@@ -49,6 +52,15 @@ type
     procedure gravaEm(const caminho: string);
     procedure UpdateFile; override;
 
+    //Apaga do documento as secoes que nenhum dia cita.
+    //
+    //SERVE A EXPORTACAO, e o motivo nao e estetico: secao solta vai para o
+    //_secoes, e o que esta num arquivo que SAI daqui pode ser caminho
+    //absoluto do dir_temp desta maquina (item de Avulsa) ou lixo de uma
+    //gravacao antiga. O _secoes existe para o arquivo INTERNO nao perder a
+    //secao criada na janela em que o id ainda nao entrou no [Geral]; num
+    //arquivo exportado essa janela nao existe.
+    procedure tiraSecoesSoltas;
     function comoJson: string;
     function comoIni: string;
   end;
@@ -188,14 +200,12 @@ end;
 
 //As secoes que nenhum dia referencia, como '  "_secoes": { ... }', prontas
 //para entrar no envelope. Vazio quando nao ha nenhuma, que e o normal.
-function TLiturgiaArq.secoesSoltasJson: string;
+procedure TLiturgiaArq.achaSecoesSoltas(lista: TStringList);
 var
-  usadas, secoes, chaves, ids: TStringList;
+  usadas, secoes, ids: TStringList;
   i, k, dia: Integer;
-  corpo, bloco: string;
 begin
-  Result := '';
-
+  lista.Clear;
   usadas := TStringList.Create;
   secoes := TStringList.Create;
   try
@@ -218,7 +228,6 @@ begin
     end;
 
     ReadSections(secoes);
-    corpo := '';
 
     for i := 0 to secoes.Count - 1 do
     begin
@@ -236,16 +245,54 @@ begin
          (usadas.IndexOf(secoes[i]) >= 0) then
         Continue;
 
-      bloco := '    "' + escapaTextoJson(secoes[i]) + '": {' + sLineBreak;
+      lista.Add(secoes[i]);
+    end;
+  finally
+    secoes.Free;
+    usadas.Free;
+  end;
+end;
+
+procedure TLiturgiaArq.tiraSecoesSoltas;
+var
+  soltas: TStringList;
+  i: Integer;
+begin
+  soltas := TStringList.Create;
+  try
+    achaSecoesSoltas(soltas);
+
+    for i := 0 to soltas.Count - 1 do
+      EraseSection(soltas[i]);
+  finally
+    soltas.Free;
+  end;
+end;
+
+function TLiturgiaArq.secoesSoltasJson: string;
+var
+  soltas, chaves: TStringList;
+  i, k: Integer;
+  corpo, bloco: string;
+begin
+  Result := '';
+  soltas := TStringList.Create;
+  try
+    achaSecoesSoltas(soltas);
+    corpo := '';
+
+    for i := 0 to soltas.Count - 1 do
+    begin
+      bloco := '    "' + escapaTextoJson(soltas[i]) + '": {' + sLineBreak;
 
       chaves := TStringList.Create;
       try
-        ReadSection(secoes[i], chaves);
+        ReadSection(soltas[i], chaves);
 
         for k := 0 to chaves.Count - 1 do
         begin
           bloco := bloco + jsonParTexto('      ', chaves[k],
-                                        ReadString(secoes[i], chaves[k], ''));
+                                        ReadString(soltas[i], chaves[k], ''));
 
           if (k < chaves.Count - 1) then
             bloco := bloco + ',';
@@ -268,8 +315,7 @@ begin
       Result := '  "' + CHAVE_SECOES_SOLTAS + '": {' + sLineBreak
               + corpo + sLineBreak + '  }';
   finally
-    secoes.Free;
-    usadas.Free;
+    soltas.Free;
   end;
 end;
 
